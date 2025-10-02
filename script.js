@@ -59,31 +59,20 @@ class BudgetManager {
         this.showDashboard();
     }
 
-    // Gestion des données
+    // Gestion des données - STOCKAGE SERVEUR UNIQUEMENT
     async loadData() {
-        // Essayer de charger depuis un fichier local d'abord
         try {
-            if (this.fileHandle) {
-                const file = await this.fileHandle.getFile();
-                const contents = await file.text();
-                this.data = JSON.parse(contents);
-                
-                // Initialiser savingsGoals si il n'existe pas (compatibilité anciennes données)
-                if (!this.data.savingsGoals) {
-                    this.data.savingsGoals = [];
-                }
-                
-                console.log('Données chargées depuis le fichier local');
-                return;
+            console.log('📡 Chargement des données depuis le serveur...');
+            const response = await window.apiClient.getData();
+            this.data = response;
+            
+            // Initialiser les champs manquants pour compatibilité
+            if (!this.data.savingsGoals) {
+                this.data.savingsGoals = [];
             }
-        } catch (error) {
-            console.log('Pas de fichier local trouvé, utilisation du localStorage');
-        }
-
-        // Fallback vers localStorage
-        const savedData = localStorage.getItem('budgetData');
-        if (savedData) {
-            this.data = JSON.parse(savedData);
+            if (!this.data.recurringTransactions) {
+                this.data.recurringTransactions = [];
+            }
             
             // Ajouter des IDs aux transactions existantes qui n'en ont pas
             this.data.transactions = this.data.transactions.map((transaction, index) => {
@@ -93,100 +82,35 @@ class BudgetManager {
                 return transaction;
             });
             
-            // Initialiser savingsGoals si il n'existe pas (compatibilité anciennes données)
-            if (!this.data.savingsGoals) {
-                this.data.savingsGoals = [];
-            }
+            console.log('✅ Données chargées depuis le serveur');
+        } catch (error) {
+            console.error('❌ Erreur chargement données:', error);
+            this.showNotification('Erreur de connexion au serveur', 'error');
             
-            // Sauvegarder les données mises à jour
-            await this.saveData();
+            // Données par défaut en cas d'erreur
+            this.data = {
+                salary: 0,
+                currentMonth: new Date().toISOString().slice(0, 7),
+                categories: {},
+                transactions: [],
+                recurringTransactions: [],
+                savingsGoals: []
+            };
         }
     }
 
     async saveData() {
-        // Essayer de sauvegarder dans un fichier local d'abord
         try {
-            if (this.fileHandle) {
-                const writable = await this.fileHandle.createWritable();
-                await writable.write(JSON.stringify(this.data, null, 2));
-                await writable.close();
-                console.log('Données sauvegardées dans le fichier local');
-                return;
-            }
+            console.log('💾 Sauvegarde des données sur le serveur...');
+            await window.apiClient.saveData(this.data);
+            console.log('✅ Données sauvegardées sur le serveur');
         } catch (error) {
-            console.log('Erreur sauvegarde fichier local, utilisation du localStorage');
-        }
-
-        // Fallback vers localStorage
-        localStorage.setItem('budgetData', JSON.stringify(this.data));
-    }
-
-    async setupLocalFile() {
-        try {
-            // Vérifier si l'API File System Access est supportée
-            if ('showSaveFilePicker' in window) {
-                const options = {
-                    types: [{
-                        description: 'Fichiers de données Budget',
-                        accept: {
-                            'application/json': ['.json'],
-                        },
-                    }],
-                    suggestedName: 'budget-data.json',
-                };
-                
-                this.fileHandle = await window.showSaveFilePicker(options);
-                await this.saveData();
-                this.showNotification('Fichier local configuré ! Vos données seront sauvegardées dans ce fichier.');
-                return true;
-            } else {
-                this.showNotification('Votre navigateur ne supporte pas la sauvegarde locale. Utilisation du localStorage.', 'error');
-                return false;
-            }
-        } catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error('Erreur configuration fichier local:', error);
-                this.showNotification('Erreur lors de la configuration du fichier local.', 'error');
-            }
-            return false;
+            console.error('❌ Erreur sauvegarde données:', error);
+            this.showNotification('Erreur de sauvegarde sur le serveur', 'error');
         }
     }
 
-    async loadLocalFile() {
-        try {
-            if ('showOpenFilePicker' in window) {
-                const [fileHandle] = await window.showOpenFilePicker({
-                    types: [{
-                        description: 'Fichiers de données Budget',
-                        accept: {
-                            'application/json': ['.json'],
-                        },
-                    }],
-                });
-                
-                this.fileHandle = fileHandle;
-                await this.loadData();
-                
-                // S'assurer que savingsGoals existe après le chargement
-                if (!this.data.savingsGoals) {
-                    this.data.savingsGoals = [];
-                }
-                
-                this.updateDashboard();
-                this.showNotification('Fichier local chargé avec succès !');
-                return true;
-            } else {
-                this.showNotification('Votre navigateur ne supporte pas le chargement de fichiers locaux.', 'error');
-                return false;
-            }
-        } catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error('Erreur chargement fichier local:', error);
-                this.showNotification('Erreur lors du chargement du fichier local.', 'error');
-            }
-            return false;
-        }
-    }
+    // Méthodes de fichier local supprimées - Stockage serveur uniquement
 
     isFirstTime() {
         return this.data.salary === 0 || Object.keys(this.data.categories).length === 0;
@@ -348,13 +272,7 @@ class BudgetManager {
             this.importData(e);
         });
 
-        // Boutons de stockage local
-        document.getElementById('setup-local-file-btn').addEventListener('click', () => {
-            this.setupLocalFile();
-        });
-        document.getElementById('load-local-file-btn').addEventListener('click', () => {
-            this.loadLocalFile();
-        });
+        // Boutons de stockage local supprimés - Stockage serveur uniquement
 
         // Toggle theme
         document.getElementById('theme-toggle').addEventListener('click', () => {
@@ -470,22 +388,11 @@ class BudgetManager {
                 document.getElementById('expense-amount').focus();
                 this.showNotification('💡 Raccourci: Nouvelle dépense');
             }
-            // Ctrl+S : Sauvegarder (fichier local)
-            else if (e.ctrlKey && e.key === 's') {
-                e.preventDefault();
-                this.setupLocalFile();
-            }
-            // Ctrl+O : Ouvrir fichier local
-            else if (e.ctrlKey && e.key === 'o') {
-                e.preventDefault();
-                this.loadLocalFile();
-            }
             // Ctrl+T : Toggle mode sombre
             else if (e.ctrlKey && e.key === 't') {
                 e.preventDefault();
                 this.toggleTheme();
             }
-            // (Ctrl+G retiré)
             // Échap : Fermer les modals
             else if (e.key === 'Escape') {
                 document.querySelectorAll('.fixed.inset-0').forEach(modal => {
@@ -1777,9 +1684,17 @@ class BudgetManager {
         document.getElementById('settings-modal').classList.add('hidden');
     }
 
-    resetAll() {
-        localStorage.removeItem('budgetData');
-        this.fileHandle = null; // Réinitialiser aussi le fichier local
+    async resetAll() {
+        // Réinitialiser toutes les données sur le serveur
+        this.data = {
+            salary: 0,
+            currentMonth: new Date().toISOString().slice(0, 7),
+            categories: {},
+            transactions: [],
+            recurringTransactions: [],
+            savingsGoals: []
+        };
+        await this.saveData();
         location.reload();
     }
 

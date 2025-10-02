@@ -1,0 +1,47 @@
+services:
+  budget-manager:
+    container_name: budget-manager
+    
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    ports:
+      - "3000:3000"
+    
+    volumes:
+      # Persister les données sur le NAS
+      - ./data:/app/data
+      # Optionnel: pour le développement, monter le code
+      # - ./server.js:/app/server.js
+      # - ./index.html:/app/index.html
+      # - ./script.js:/app/script.js
+    
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - TZ=Europe/Paris
+    
+    restart: unless-stopped
+    
+    networks:
+      - budget-network
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.budget.rule=Host(`budget.votre-domaine.com`)"
+      - "traefik.http.services.budget.loadbalancer.server.port=3000"
+      # SSL avec Let's Encrypt (si configuré)
+      # - "traefik.http.routers.budget.tls=true"
+      # - "traefik.http.routers.budget.tls.certresolver=letsencrypt"
+    
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/data', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  budget-network:
+    driver: bridge

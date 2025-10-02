@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+README.md
+.env
+.DS_Store
+Thumbs.db
+*.log
+.vscode
+.idea
+data/*.backup
+test-buttons.html
+NOUVEAUTES.md
+ROADMAP.md
+RECAP-SESSION-02-10-2025.md
+DEPLOIEMENT-DOCKER.md

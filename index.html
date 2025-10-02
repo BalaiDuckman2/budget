@@ -482,18 +482,26 @@
                     </div>
                     <div class="p-6">
                         <div class="space-y-4">
-                            <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
-                                <h4 class="font-semibold text-blue-800 mb-2 flex items-center gap-2">
-                                    <i class="fas fa-save"></i> Stockage Local
+                            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border-l-4 border-blue-500">
+                                <h4 class="font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
+                                    <i class="fas fa-server"></i> Stockage Serveur
                                 </h4>
-                                <p class="text-blue-600 text-sm mb-3">Sauvegardez vos données dans un fichier sur votre PC au lieu du navigateur</p>
-                                <div class="space-y-2">
-                                    <button id="setup-local-file-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
-                                        <i class="fas fa-folder-open"></i> Configurer fichier local
-                                    </button>
-                                    <button id="load-local-file-btn" class="w-full bg-blue-400 hover:bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
-                                        <i class="fas fa-file-import"></i> Charger fichier existant
-                                    </button>
+                                <p class="text-blue-600 dark:text-blue-400 text-sm mb-3">
+                                    ✅ Vos données sont automatiquement sauvegardées sur votre NAS
+                                </p>
+                                <div class="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                        <span>Sauvegarde automatique</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                        <span>Accessible depuis tous vos appareils</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                        <span>Backup automatique</span>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -630,6 +638,9 @@
         </div>
     </div>
 
+    <!-- API Client pour communication serveur -->
+    <script src="api-client.js"></script>
+    <!-- Script principal -->
     <script src="script.js"></script>
 </body>
 </html>
