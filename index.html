@@ -3,6 +3,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionnaire de Budget Personnel</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Gestionnaire de budget personnel avec stockage serveur">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Budget Manager">
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -311,7 +327,12 @@
                                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none">
                             </div>
                             
-                            <h4 class="text-lg font-semibold mb-4">Budgets par catégorie</h4>
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-lg font-semibold">Budgets par catégorie</h4>
+                                <button type="button" id="add-category-btn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all duration-300 flex items-center gap-2">
+                                    <i class="fas fa-plus"></i> Nouvelle catégorie
+                                </button>
+                            </div>
                             <div id="edit-categories-list" class="space-y-4 mb-6"></div>
                             
                             <div class="mb-6 p-4 bg-gray-100 rounded-lg">
@@ -530,6 +551,58 @@
         </main>
     </div>
 
+    <!-- Modal Nouvelle Catégorie -->
+    <div id="new-category-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 transition-colors duration-300">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-xl font-semibold text-primary dark:text-blue-400 flex items-center gap-2">
+                    <i class="fas fa-plus-circle"></i> Nouvelle Catégorie
+                </h3>
+                <button class="close-new-category-modal text-2xl text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">&times;</button>
+            </div>
+            <form id="new-category-form" class="p-6 space-y-4">
+                <div>
+                    <label for="new-category-name" class="block mb-2 font-semibold text-gray-700 dark:text-gray-300">Nom de la catégorie</label>
+                    <input type="text" id="new-category-name" required
+                           class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:border-primary focus:outline-none dark:bg-gray-700 dark:text-gray-200"
+                           placeholder="Ex: Restaurants, Santé, Éducation...">
+                </div>
+                
+                <div>
+                    <label for="new-category-budget" class="block mb-2 font-semibold text-gray-700 dark:text-gray-300">Budget (€)</label>
+                    <input type="number" id="new-category-budget" min="0" step="0.01" required
+                           class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:border-primary focus:outline-none dark:bg-gray-700 dark:text-gray-200"
+                           placeholder="0.00">
+                </div>
+                
+                <div>
+                    <label for="new-category-color" class="block mb-2 font-semibold text-gray-700 dark:text-gray-300">Couleur</label>
+                    <div class="flex gap-2 items-center">
+                        <input type="color" id="new-category-color" value="#6366f1"
+                               class="w-16 h-12 border-2 border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer">
+                        <div class="flex-1 grid grid-cols-6 gap-2">
+                            <button type="button" class="color-preset w-10 h-10 rounded-lg border-2 border-gray-300 hover:scale-110 transition-transform" style="background-color: #3b82f6" data-color="#3b82f6"></button>
+                            <button type="button" class="color-preset w-10 h-10 rounded-lg border-2 border-gray-300 hover:scale-110 transition-transform" style="background-color: #10b981" data-color="#10b981"></button>
+                            <button type="button" class="color-preset w-10 h-10 rounded-lg border-2 border-gray-300 hover:scale-110 transition-transform" style="background-color: #f59e0b" data-color="#f59e0b"></button>
+                            <button type="button" class="color-preset w-10 h-10 rounded-lg border-2 border-gray-300 hover:scale-110 transition-transform" style="background-color: #8b5cf6" data-color="#8b5cf6"></button>
+                            <button type="button" class="color-preset w-10 h-10 rounded-lg border-2 border-gray-300 hover:scale-110 transition-transform" style="background-color: #ef4444" data-color="#ef4444"></button>
+                            <button type="button" class="color-preset w-10 h-10 rounded-lg border-2 border-gray-300 hover:scale-110 transition-transform" style="background-color: #ec4899" data-color="#ec4899"></button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 pt-4">
+                    <button type="button" class="close-new-category-modal flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 rounded-lg transition-all duration-300">
+                        Annuler
+                    </button>
+                    <button type="submit" class="flex-1 bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-lg transition-all duration-300">
+                        <i class="fas fa-plus mr-2"></i>Créer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal Templates de Budget -->
     <div id="template-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto transition-colors duration-300">
@@ -642,5 +715,60 @@
     <script src="api-client.js"></script>
     <!-- Script principal -->
     <script src="script.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        // Enregistrer le Service Worker pour PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker enregistré:', registration.scope);
+                        
+                        // Vérifier les mises à jour
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Nouvelle version disponible
+                                    if (confirm('Une nouvelle version est disponible ! Recharger ?')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.log('❌ Erreur Service Worker:', error);
+                    });
+            });
+            
+            // Recharger quand un nouveau Service Worker prend le contrôle
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
+        }
+        
+        // Détecter l'installation de la PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Afficher un bouton d'installation personnalisé (optionnel)
+            console.log('💡 PWA installable !');
+        });
+        
+        // Détecter quand l'app est installée
+        window.addEventListener('appinstalled', () => {
+            console.log('🎉 PWA installée avec succès !');
+            deferredPrompt = null;
+        });
+    </script>
 </body>
 </html>

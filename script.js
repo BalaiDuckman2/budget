@@ -322,6 +322,30 @@ class BudgetManager {
             });
         });
 
+        // Nouvelle catégorie
+        document.getElementById('add-category-btn').addEventListener('click', () => {
+            document.getElementById('new-category-modal').classList.remove('hidden');
+        });
+
+        document.querySelectorAll('.close-new-category-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('new-category-modal').classList.add('hidden');
+            });
+        });
+
+        document.getElementById('new-category-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.addNewCategory();
+        });
+
+        // Sélecteurs de couleur prédéfinis
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('color-preset')) {
+                const color = e.target.dataset.color;
+                document.getElementById('new-category-color').value = color;
+            }
+        });
+
         // Bouton flottant + et modal d'ajout rapide
         const fab = document.getElementById('fab-add-expense');
         const quickModal = document.getElementById('quick-expense-modal');
@@ -1750,16 +1774,19 @@ class BudgetManager {
 
         Object.entries(this.data.categories).forEach(([key, category]) => {
             const categoryDiv = document.createElement('div');
-            categoryDiv.className = 'flex items-center gap-3 p-4 bg-gray-100 rounded-lg';
+            categoryDiv.className = 'flex items-center gap-3 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg';
             categoryDiv.innerHTML = `
-                <label class="flex-1 font-semibold">${category.name}</label>
+                <label class="flex-1 font-semibold text-gray-800 dark:text-gray-200">${category.name}</label>
                 <div class="flex items-center gap-2">
-                    <span class="text-sm text-gray-600">Dépensé: ${category.spent.toFixed(2)}€</span>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Dépensé: ${category.spent.toFixed(2)}€</span>
                     <input type="number" name="edit-${key}" value="${category.budget}" min="0" step="0.01" 
-                           class="w-24 p-2 border border-gray-300 rounded text-center edit-category-input">
-                    <span class="text-gray-600">€</span>
+                           class="w-24 p-2 border border-gray-300 dark:border-gray-600 rounded text-center edit-category-input dark:bg-gray-800 dark:text-gray-200">
+                    <span class="text-gray-600 dark:text-gray-400">€</span>
                     <button type="button" class="btn-edit-rest bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded text-sm transition-all hover:scale-105" data-category="${key}">
                         Reste ici
+                    </button>
+                    <button type="button" class="btn-delete-category bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-all hover:scale-105" data-category="${key}" title="Supprimer">
+                        <i class="fas fa-trash"></i>
                     </button>
                 </div>
             `;
@@ -1774,6 +1801,12 @@ class BudgetManager {
         container.querySelectorAll('.btn-edit-rest').forEach(button => {
             button.addEventListener('click', (e) => {
                 this.allocateRemainingEditBudget(e.target.dataset.category);
+            });
+        });
+
+        container.querySelectorAll('.btn-delete-category').forEach(button => {
+            button.addEventListener('click', (e) => {
+                this.deleteCategory(e.target.closest('button').dataset.category);
             });
         });
     }
@@ -1880,6 +1913,81 @@ class BudgetManager {
         document.getElementById('edit-budget-modal').classList.add('hidden');
         
         this.showNotification('Budgets mis à jour avec succès !');
+    }
+
+    // Créer une nouvelle catégorie
+    addNewCategory() {
+        const name = document.getElementById('new-category-name').value.trim();
+        const budget = parseFloat(document.getElementById('new-category-budget').value);
+        const color = document.getElementById('new-category-color').value;
+
+        if (!name || !budget || budget < 0) {
+            this.showNotification('Veuillez remplir tous les champs', 'error');
+            return;
+        }
+
+        // Créer une clé unique à partir du nom
+        const key = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+        // Vérifier si la catégorie existe déjà
+        if (this.data.categories[key]) {
+            this.showNotification('Cette catégorie existe déjà', 'error');
+            return;
+        }
+
+        // Créer la nouvelle catégorie
+        this.data.categories[key] = {
+            name: name,
+            budget: budget,
+            spent: 0,
+            color: color
+        };
+
+        this.saveData();
+        this.populateEditCategories();
+        this.updateEditTotals();
+        
+        // Fermer le modal et réinitialiser le formulaire
+        document.getElementById('new-category-modal').classList.add('hidden');
+        document.getElementById('new-category-form').reset();
+        
+        this.showNotification(`Catégorie "${name}" créée avec succès ! 🎉`);
+    }
+
+    // Supprimer une catégorie
+    deleteCategory(categoryKey) {
+        const category = this.data.categories[categoryKey];
+        
+        if (!category) return;
+
+        // Vérifier s'il y a des transactions dans cette catégorie
+        const transactionsInCategory = this.data.transactions.filter(t => t.category === categoryKey);
+        
+        let confirmMessage = `Supprimer la catégorie "${category.name}" ?`;
+        if (transactionsInCategory.length > 0) {
+            confirmMessage += `\n\n⚠️ Attention : ${transactionsInCategory.length} transaction(s) seront également supprimée(s).`;
+        }
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        // Supprimer la catégorie
+        delete this.data.categories[categoryKey];
+
+        // Supprimer les transactions associées
+        this.data.transactions = this.data.transactions.filter(t => t.category !== categoryKey);
+
+        // Supprimer les transactions récurrentes associées
+        if (this.data.recurringTransactions) {
+            this.data.recurringTransactions = this.data.recurringTransactions.filter(r => r.category !== categoryKey);
+        }
+
+        this.saveData();
+        this.populateEditCategories();
+        this.updateEditTotals();
+        
+        this.showNotification(`Catégorie "${category.name}" supprimée`);
     }
 
     // Gestion du modal des transactions
