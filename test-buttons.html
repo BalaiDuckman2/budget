@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Boutons de Filtre</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        'primary-dark': '#4f46e5'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white p-8 rounded-2xl shadow-xl">
+            <h1 class="text-3xl font-bold text-primary mb-6">Test des Boutons de Filtre</h1>
+            
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold mb-4">Boutons de Test</h2>
+                <div class="flex flex-wrap gap-2" id="test-buttons">
+                    <!-- Bouton "Toutes" (défini en HTML) -->
+                    <button class="filter-btn active bg-primary text-white px-3 py-1 rounded-full text-sm transition-all duration-300 transform hover:scale-105 shadow-lg ring-2 ring-primary ring-opacity-50" data-category="all">
+                        Toutes
+                    </button>
+                    <!-- Les autres boutons seront générés par JavaScript -->
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold mb-4">Debug Info</h2>
+                <div id="debug-info" class="bg-gray-100 p-4 rounded-lg text-sm font-mono"></div>
+            </div>
+            
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold mb-4">Actions</h2>
+                <button id="test-courses" class="bg-blue-500 text-white px-4 py-2 rounded mr-2">Test Courses</button>
+                <button id="test-loisirs" class="bg-purple-500 text-white px-4 py-2 rounded mr-2">Test Loisirs</button>
+                <button id="test-all" class="bg-gray-500 text-white px-4 py-2 rounded">Test Toutes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulation des catégories
+        const categories = {
+            'courses': { name: 'Courses' },
+            'loisirs': { name: 'Loisirs' },
+            'transport': { name: 'Transport' },
+            'logement': { name: 'Logement' }
+        };
+
+        function addDebugInfo(message) {
+            const debugDiv = document.getElementById('debug-info');
+            debugDiv.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
+            console.log(message);
+        }
+
+        // Générer les boutons de catégorie (comme dans l'app)
+        function generateCategoryButtons() {
+            const container = document.getElementById('test-buttons');
+            
+            Object.entries(categories).forEach(([key, category]) => {
+                const filterBtn = document.createElement('button');
+                filterBtn.className = 'filter-btn bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-full text-sm transition-all duration-300 transform hover:scale-105';
+                filterBtn.dataset.category = key;
+                filterBtn.textContent = category.name;
+                filterBtn.addEventListener('click', (e) => {
+                    testFilterTransactions(e.target.dataset.category);
+                });
+                container.appendChild(filterBtn);
+                
+                addDebugInfo(`Bouton créé: ${key} -> ${category.name}`);
+            });
+        }
+
+        // Test de la fonction de filtrage (simplifiée)
+        function testFilterTransactions(categoryFilter) {
+            addDebugInfo(`=== Test filtrage: ${categoryFilter} ===`);
+            
+            // Réinitialiser tous les boutons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-primary', 'text-white', 'shadow-lg', 'scale-105', 'ring-2', 'ring-primary', 'ring-opacity-50');
+                btn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                if (!btn.classList.contains('transition-all')) {
+                    btn.classList.add('transition-all', 'duration-300', 'transform');
+                }
+            });
+            
+            addDebugInfo('Tous les boutons réinitialisés');
+            
+            // Chercher le bouton actif
+            const activeBtn = document.querySelector(`[data-category="${categoryFilter}"]`);
+            addDebugInfo(`Recherche bouton pour "${categoryFilter}": ${activeBtn ? 'TROUVÉ' : 'NON TROUVÉ'}`);
+            
+            if (activeBtn) {
+                // Activer le bouton
+                activeBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                activeBtn.classList.add('active', 'bg-primary', 'text-white', 'shadow-lg', 'scale-105', 'ring-2', 'ring-primary', 'ring-opacity-50');
+                addDebugInfo(`✅ Bouton "${activeBtn.textContent}" activé`);
+            } else {
+                addDebugInfo('❌ Bouton non trouvé !');
+                // Lister tous les boutons disponibles
+                const allButtons = document.querySelectorAll('.filter-btn');
+                addDebugInfo('Boutons disponibles:');
+                allButtons.forEach(btn => {
+                    addDebugInfo(`  - "${btn.dataset.category}": "${btn.textContent}"`);
+                });
+            }
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            addDebugInfo('Page chargée');
+            generateCategoryButtons();
+            
+            // Event listeners pour les boutons de test
+            document.getElementById('test-courses').addEventListener('click', () => {
+                testFilterTransactions('courses');
+            });
+            
+            document.getElementById('test-loisirs').addEventListener('click', () => {
+                testFilterTransactions('loisirs');
+            });
+            
+            document.getElementById('test-all').addEventListener('click', () => {
+                testFilterTransactions('all');
+            });
+            
+            addDebugInfo('Initialisation terminée');
+        });
+    </script>
+</body>
+</html>
