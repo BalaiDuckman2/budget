@@ -1,17 +1,18 @@
+import type { SavingsGoal, GoalProgress } from '@/types';
+import type { DataManager } from './DataManager';
+
 // Gestionnaire d'objectifs d'épargne
-class SavingsManager {
-    constructor(dataManager) {
-        this.dataManager = dataManager;
-    }
+export class SavingsManager {
+    constructor(private dataManager: DataManager) {}
 
     // Ajouter un objectif d'épargne
-    addSavingsGoal(name, target, deadline, current = 0) {
+    addSavingsGoal(name: string, target: number, deadline: string, current: number = 0): SavingsGoal {
         if (!name || !target || !deadline) {
             throw new Error('Veuillez remplir tous les champs obligatoires');
         }
 
         const data = this.dataManager.getData();
-        const goal = {
+        const goal: SavingsGoal = {
             id: Date.now().toString(),
             name: name,
             target: target,
@@ -26,8 +27,8 @@ class SavingsManager {
     }
 
     // Ajouter un montant à un objectif
-    addToGoal(goalId, amount) {
-        if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
+    addToGoal(goalId: string, amount: number): { goal: SavingsGoal; justCompleted: boolean } {
+        if (!amount || isNaN(amount) || parseFloat(amount.toString()) <= 0) {
             throw new Error('Montant invalide');
         }
 
@@ -38,7 +39,7 @@ class SavingsManager {
             throw new Error('Objectif introuvable');
         }
 
-        goal.current += parseFloat(amount);
+        goal.current += parseFloat(amount.toString());
         
         const wasCompleted = goal.completed;
         if (goal.current >= goal.target && !goal.completed) {
@@ -49,8 +50,8 @@ class SavingsManager {
     }
 
     // Modifier le montant d'un objectif
-    editGoal(goalId, newAmount) {
-        if (newAmount === null || isNaN(newAmount) || parseFloat(newAmount) < 0) {
+    editGoal(goalId: string, newAmount: number | string): { goal: SavingsGoal; justCompleted: boolean } {
+        if (newAmount === null || isNaN(Number(newAmount)) || parseFloat(newAmount.toString()) < 0) {
             throw new Error('Montant invalide');
         }
 
@@ -61,7 +62,7 @@ class SavingsManager {
             throw new Error('Objectif introuvable');
         }
 
-        goal.current = parseFloat(newAmount);
+        goal.current = parseFloat(newAmount.toString());
         
         const wasCompleted = goal.completed;
         if (goal.current >= goal.target && !goal.completed) {
@@ -72,7 +73,7 @@ class SavingsManager {
     }
 
     // Supprimer un objectif
-    deleteSavingsGoal(goalId) {
+    deleteSavingsGoal(goalId: string): SavingsGoal {
         const data = this.dataManager.getData();
         const goal = data.savingsGoals.find(g => g.id === goalId);
         
@@ -85,25 +86,25 @@ class SavingsManager {
     }
 
     // Obtenir tous les objectifs
-    getAllGoals() {
+    getAllGoals(): SavingsGoal[] {
         const data = this.dataManager.getData();
         return data.savingsGoals || [];
     }
 
     // Obtenir un objectif par ID
-    getGoalById(goalId) {
+    getGoalById(goalId: string): SavingsGoal | undefined {
         const data = this.dataManager.getData();
         return data.savingsGoals.find(g => g.id === goalId);
     }
 
     // Calculer la progression d'un objectif
-    getGoalProgress(goalId) {
+    getGoalProgress(goalId: string): GoalProgress | null {
         const goal = this.getGoalById(goalId);
         if (!goal) return null;
 
         const progress = (goal.current / goal.target) * 100;
         const isCompleted = progress >= 100;
-        const daysLeft = Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+        const daysLeft = Math.ceil((new Date(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
         return {
             progress: progress,
@@ -112,9 +113,4 @@ class SavingsManager {
             remaining: goal.target - goal.current
         };
     }
-}
-
-// Export pour utilisation en module
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = SavingsManager;
 }

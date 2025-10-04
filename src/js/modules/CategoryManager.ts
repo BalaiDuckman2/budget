@@ -1,12 +1,13 @@
+import type { Category } from '@/types';
+import type { DataManager } from './DataManager';
+
 // Gestionnaire de catégories
-class CategoryManager {
-    constructor(dataManager) {
-        this.dataManager = dataManager;
-    }
+export class CategoryManager {
+    constructor(private dataManager: DataManager) {}
 
     // Obtenir le nom d'affichage d'une catégorie
-    getCategoryDisplayName(key) {
-        const names = {
+    getCategoryDisplayName(key: string): string {
+        const names: Record<string, string> = {
             'courses': 'Courses',
             'loisirs': 'Loisirs',
             'transport': 'Transport',
@@ -18,7 +19,7 @@ class CategoryManager {
     }
 
     // Ajouter une nouvelle catégorie
-    addCategory(name, budget, color = '#6366f1') {
+    addCategory(name: string, budget: number, color: string = '#6366f1'): { key: string; category: Category } {
         const data = this.dataManager.getData();
 
         if (!name || !budget || budget < 0) {
@@ -45,7 +46,7 @@ class CategoryManager {
     }
 
     // Supprimer une catégorie
-    deleteCategory(categoryKey) {
+    deleteCategory(categoryKey: string): { category: Category; transactionsCount: number } {
         const data = this.dataManager.getData();
         const category = data.categories[categoryKey];
         
@@ -71,7 +72,7 @@ class CategoryManager {
     }
 
     // Mettre à jour le budget d'une catégorie
-    updateCategoryBudget(categoryKey, newBudget) {
+    updateCategoryBudget(categoryKey: string, newBudget: number): { oldBudget: number; newBudget: number } {
         const data = this.dataManager.getData();
         
         if (!data.categories[categoryKey]) {
@@ -94,19 +95,19 @@ class CategoryManager {
     }
 
     // Obtenir toutes les catégories
-    getAllCategories() {
+    getAllCategories(): Record<string, Category> {
         const data = this.dataManager.getData();
         return data.categories;
     }
 
     // Obtenir une catégorie par clé
-    getCategory(categoryKey) {
+    getCategory(categoryKey: string): Category | undefined {
         const data = this.dataManager.getData();
         return data.categories[categoryKey];
     }
 
     // Calculer le budget restant à allouer
-    getRemainingBudgetToAllocate(excludeCategory = null) {
+    getRemainingBudgetToAllocate(excludeCategory: string | null = null): number {
         const data = this.dataManager.getData();
         const salary = data.salary || 0;
         
@@ -121,7 +122,7 @@ class CategoryManager {
     }
 
     // Allouer le budget restant à une catégorie
-    allocateRemainingBudget(categoryKey) {
+    allocateRemainingBudget(categoryKey: string): number {
         const data = this.dataManager.getData();
         
         if (data.salary === 0) {
@@ -144,20 +145,15 @@ class CategoryManager {
     }
 
     // Vérifier si le budget total dépasse le salaire
-    isBudgetExceeded() {
+    isBudgetExceeded(): boolean {
         const data = this.dataManager.getData();
         const totalBudget = Object.values(data.categories).reduce((sum, cat) => sum + (cat.budget || 0), 0);
         return totalBudget > data.salary;
     }
 
     // Obtenir le total des budgets alloués
-    getTotalBudget() {
+    getTotalBudget(): number {
         const data = this.dataManager.getData();
         return Object.values(data.categories).reduce((sum, cat) => sum + (cat.budget || 0), 0);
     }
-}
-
-// Export pour utilisation en module
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = CategoryManager;
 }

@@ -1,18 +1,24 @@
+import type { EvolutionData } from '@/types';
+import type { DataManager } from './DataManager';
+import type { ThemeManager } from './ThemeManager';
+
 // Gestionnaire de graphiques (Chart.js)
-class ChartManager {
-    constructor(dataManager, themeManager) {
-        this.dataManager = dataManager;
-        this.themeManager = themeManager;
-        this.chart = null;
-        this.evolutionChart = null;
-    }
+export class ChartManager {
+    private chart: any = null;
+    private evolutionChart: any = null;
+
+    constructor(
+        private dataManager: DataManager,
+        private themeManager: ThemeManager
+    ) {}
 
     // Mettre à jour le graphique principal (doughnut)
-    updateChart() {
-        const ctx = document.getElementById('budget-chart');
+    updateChart(): void {
+        const ctx = document.getElementById('budget-chart') as HTMLCanvasElement;
         if (!ctx) return;
         
         const context = ctx.getContext('2d');
+        if (!context) return;
         
         if (this.chart) {
             this.chart.destroy();
@@ -23,7 +29,7 @@ class ChartManager {
         const budgetData = Object.values(data.categories).map(cat => cat.budget);
         const spentData = Object.values(data.categories).map(cat => cat.spent);
 
-        this.chart = new Chart(context, {
+        this.chart = new (window as any).Chart(context, {
             type: 'doughnut',
             data: {
                 labels: labels,
@@ -56,7 +62,7 @@ class ChartManager {
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
+                            label: function(context: any) {
                                 const category = context.label;
                                 const budget = context.parsed;
                                 const spent = spentData[context.dataIndex];
@@ -73,11 +79,12 @@ class ChartManager {
     }
 
     // Mettre à jour le graphique d'évolution (line chart)
-    updateEvolutionChart() {
-        const ctx = document.getElementById('evolution-chart');
+    updateEvolutionChart(): void {
+        const ctx = document.getElementById('evolution-chart') as HTMLCanvasElement;
         if (!ctx) return;
         
         const context = ctx.getContext('2d');
+        if (!context) return;
         
         if (this.evolutionChart) {
             this.evolutionChart.destroy();
@@ -90,7 +97,7 @@ class ChartManager {
         const textColor = isDark ? '#e5e7eb' : '#374151';
         const gridColor = isDark ? '#374151' : '#e5e7eb';
 
-        this.evolutionChart = new Chart(context, {
+        this.evolutionChart = new (window as any).Chart(context, {
             type: 'line',
             data: {
                 labels: evolutionData.labels,
@@ -146,7 +153,7 @@ class ChartManager {
                         borderColor: isDark ? '#374151' : '#e5e7eb',
                         borderWidth: 1,
                         callbacks: {
-                            label: function(context) {
+                            label: function(context: any) {
                                 return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}€`;
                             }
                         }
@@ -170,7 +177,7 @@ class ChartManager {
                         },
                         ticks: {
                             color: textColor,
-                            callback: function(value) {
+                            callback: function(value: any) {
                                 return value.toFixed(0) + '€';
                             }
                         }
@@ -181,11 +188,11 @@ class ChartManager {
     }
 
     // Obtenir les données d'évolution sur 6 mois
-    getEvolutionData() {
+    getEvolutionData(): EvolutionData {
         const data = this.dataManager.getData();
-        const months = [];
-        const expenses = [];
-        const budgets = [];
+        const months: string[] = [];
+        const expenses: number[] = [];
+        const budgets: number[] = [];
         
         const currentDate = new Date();
         
@@ -256,7 +263,7 @@ class ChartManager {
     }
 
     // Détruire les graphiques
-    destroy() {
+    destroy(): void {
         if (this.chart) {
             this.chart.destroy();
             this.chart = null;
@@ -266,9 +273,4 @@ class ChartManager {
             this.evolutionChart = null;
         }
     }
-}
-
-// Export pour utilisation en module
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = ChartManager;
 }

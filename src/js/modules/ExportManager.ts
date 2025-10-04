@@ -1,12 +1,13 @@
+import type { BudgetData } from '@/types';
+import type { DataManager } from './DataManager';
+
 // Gestionnaire d'export (PDF et données)
-class ExportManager {
-    constructor(dataManager) {
-        this.dataManager = dataManager;
-    }
+export class ExportManager {
+    constructor(private dataManager: DataManager) {}
 
     // Export en PDF
-    async exportToPDF() {
-        const { jsPDF } = window.jspdf;
+    async exportToPDF(): Promise<string> {
+        const { jsPDF } = (window as any).jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
         const data = this.dataManager.getData();
         
@@ -56,7 +57,7 @@ class ExportManager {
         yPos += 8;
         
         pdf.setFontSize(10);
-        Object.entries(data.categories).forEach(([key, cat]) => {
+        Object.entries(data.categories).forEach(([, cat]) => {
             if (yPos > 270) {
                 pdf.addPage();
                 yPos = 20;
@@ -125,7 +126,7 @@ class ExportManager {
     }
 
     // Export des données JSON
-    exportData() {
+    exportData(): void {
         const data = this.dataManager.getData();
         const dataStr = JSON.stringify(data, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -138,12 +139,12 @@ class ExportManager {
     }
 
     // Import des données JSON
-    async importData(file) {
+    async importData(file: File): Promise<BudgetData> {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const imported = JSON.parse(e.target.result);
+                    const imported = JSON.parse(e.target?.result as string);
                     resolve(imported);
                 } catch (error) {
                     reject(new Error('Fichier JSON invalide'));
@@ -153,9 +154,4 @@ class ExportManager {
             reader.readAsText(file);
         });
     }
-}
-
-// Export pour utilisation en module
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = ExportManager;
 }

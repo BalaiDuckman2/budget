@@ -1,18 +1,18 @@
+import type { Transaction, CategoryStats, GlobalStats } from '@/types';
+import type { DataManager } from './DataManager';
+
 // Gestionnaire de transactions
-class TransactionManager {
-    constructor(dataManager) {
-        this.dataManager = dataManager;
-        this.editingTransactionId = null;
-    }
+export class TransactionManager {
+    constructor(private dataManager: DataManager) {}
 
     // Ajouter une dépense
-    addExpense(category, amount, description) {
+    addExpense(category: string, amount: number, description: string): Transaction {
         if (!category || !amount || amount <= 0) {
             throw new Error('Veuillez remplir tous les champs obligatoires');
         }
 
         const data = this.dataManager.getData();
-        const transaction = {
+        const transaction: Transaction = {
             id: Date.now().toString(),
             category: category,
             amount: amount,
@@ -27,13 +27,13 @@ class TransactionManager {
     }
 
     // Obtenir le total dépensé
-    getTotalSpent() {
+    getTotalSpent(): number {
         const data = this.dataManager.getData();
         return Object.values(data.categories).reduce((total, category) => total + category.spent, 0);
     }
 
     // Filtrer les transactions
-    filterTransactions(categoryFilter, searchTerm = '') {
+    filterTransactions(categoryFilter: string, searchTerm: string = ''): Transaction[] {
         const data = this.dataManager.getData();
         let filteredTransactions = data.transactions;
         
@@ -57,7 +57,12 @@ class TransactionManager {
     }
 
     // Modifier une transaction
-    editTransaction(transactionId, newCategory, newAmount, newDescription) {
+    editTransaction(
+        transactionId: string, 
+        newCategory: string, 
+        newAmount: number, 
+        newDescription: string
+    ): { transaction: Transaction; oldCategory: string; newCategory: string } {
         const data = this.dataManager.getData();
         const transaction = data.transactions.find(t => t.id === transactionId);
         
@@ -89,7 +94,7 @@ class TransactionManager {
     }
 
     // Supprimer une transaction
-    deleteTransaction(transactionId) {
+    deleteTransaction(transactionId: string): Transaction {
         const data = this.dataManager.getData();
         const transaction = data.transactions.find(t => t.id === transactionId);
         
@@ -107,19 +112,19 @@ class TransactionManager {
     }
 
     // Obtenir une transaction par ID
-    getTransactionById(transactionId) {
+    getTransactionById(transactionId: string): Transaction | undefined {
         const data = this.dataManager.getData();
         return data.transactions.find(t => t.id === transactionId);
     }
 
     // Obtenir les transactions récentes
-    getRecentTransactions(limit = 3) {
+    getRecentTransactions(limit: number = 3): Transaction[] {
         const data = this.dataManager.getData();
         return data.transactions.slice(-limit).reverse();
     }
 
     // Obtenir les top dépenses
-    getTopExpenses(limit = 5) {
+    getTopExpenses(limit: number = 5): Transaction[] {
         const data = this.dataManager.getData();
         return [...data.transactions]
             .sort((a, b) => b.amount - a.amount)
@@ -127,7 +132,7 @@ class TransactionManager {
     }
 
     // Obtenir les statistiques de catégorie
-    getCategoryStats(categoryKey) {
+    getCategoryStats(categoryKey: string): CategoryStats | null {
         const data = this.dataManager.getData();
         const category = data.categories[categoryKey];
         
@@ -145,7 +150,7 @@ class TransactionManager {
     }
 
     // Obtenir les statistiques globales
-    getGlobalStats() {
+    getGlobalStats(): GlobalStats {
         const data = this.dataManager.getData();
         const totalBudget = Object.values(data.categories).reduce((sum, cat) => sum + cat.budget, 0);
         const totalSpent = Object.values(data.categories).reduce((sum, cat) => sum + cat.spent, 0);
@@ -159,9 +164,4 @@ class TransactionManager {
             percentage: globalPercentage
         };
     }
-}
-
-// Export pour utilisation en module
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = TransactionManager;
 }

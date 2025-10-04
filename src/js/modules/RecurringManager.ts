@@ -1,17 +1,25 @@
+import type { RecurringTransaction } from '@/types';
+import type { DataManager } from './DataManager';
+
 // Gestionnaire de transactions récurrentes
-class RecurringManager {
-    constructor(dataManager) {
-        this.dataManager = dataManager;
-    }
+export class RecurringManager {
+    constructor(private dataManager: DataManager) {}
 
     // Ajouter une transaction récurrente
-    addRecurringTransaction(name, category, amount, frequency, day, active = true) {
+    addRecurringTransaction(
+        name: string, 
+        category: string, 
+        amount: number, 
+        frequency: 'monthly' | 'weekly' | 'yearly', 
+        day: number, 
+        active: boolean = true
+    ): RecurringTransaction {
         if (!name || !category || !amount || amount <= 0) {
             throw new Error('Veuillez remplir tous les champs obligatoires');
         }
 
         const data = this.dataManager.getData();
-        const recurring = {
+        const recurring: RecurringTransaction = {
             id: Date.now().toString(),
             name,
             category,
@@ -27,7 +35,7 @@ class RecurringManager {
     }
 
     // Supprimer une transaction récurrente
-    deleteRecurringTransaction(recurringId) {
+    deleteRecurringTransaction(recurringId: string): RecurringTransaction {
         const data = this.dataManager.getData();
         const recurring = data.recurringTransactions.find(r => r.id === recurringId);
         
@@ -40,7 +48,7 @@ class RecurringManager {
     }
 
     // Basculer l'état actif/inactif
-    toggleRecurringTransaction(recurringId) {
+    toggleRecurringTransaction(recurringId: string): RecurringTransaction {
         const data = this.dataManager.getData();
         const recurring = data.recurringTransactions.find(r => r.id === recurringId);
         
@@ -53,7 +61,7 @@ class RecurringManager {
     }
 
     // Traiter les transactions récurrentes
-    processRecurringTransactions() {
+    processRecurringTransactions(): number {
         const data = this.dataManager.getData();
         const today = new Date();
         const currentDay = today.getDate();
@@ -102,19 +110,14 @@ class RecurringManager {
     }
 
     // Obtenir toutes les transactions récurrentes
-    getAllRecurringTransactions() {
+    getAllRecurringTransactions(): RecurringTransaction[] {
         const data = this.dataManager.getData();
         return data.recurringTransactions || [];
     }
 
     // Obtenir une transaction récurrente par ID
-    getRecurringTransactionById(recurringId) {
+    getRecurringTransactionById(recurringId: string): RecurringTransaction | undefined {
         const data = this.dataManager.getData();
         return data.recurringTransactions.find(r => r.id === recurringId);
     }
-}
-
-// Export pour utilisation en module
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = RecurringManager;
 }

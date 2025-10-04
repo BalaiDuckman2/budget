@@ -1,5 +1,38 @@
+// Point d'entrée principal de l'application Budget Manager
+import { ThemeManager } from './js/modules/ThemeManager';
+import { NotificationManager } from './js/modules/NotificationManager';
+import { DataManager } from './js/modules/DataManager';
+import { UIManager } from './js/modules/UIManager';
+import { ChartManager } from './js/modules/ChartManager';
+import { TransactionManager } from './js/modules/TransactionManager';
+import { CategoryManager } from './js/modules/CategoryManager';
+import { SavingsManager } from './js/modules/SavingsManager';
+import { RecurringManager } from './js/modules/RecurringManager';
+import { ExportManager } from './js/modules/ExportManager';
+import { DragDropManager } from './js/modules/DragDropManager';
+import { WidgetManager } from './js/modules/WidgetManager';
+import type { BudgetTemplate } from './types';
+
 // Gestionnaire de Budget Principal - Orchestrateur
 class BudgetManager {
+    private dataManager: DataManager;
+    private themeManager: ThemeManager;
+    private uiManager: UIManager;
+    private chartManager: ChartManager;
+    private transactionManager: TransactionManager;
+    private categoryManager: CategoryManager;
+    private savingsManager: SavingsManager;
+    private recurringManager: RecurringManager;
+    private exportManager: ExportManager;
+    private notificationManager: NotificationManager;
+    private dragDropManager: DragDropManager;
+    private widgetManager: WidgetManager;
+    
+    // Anti-spam notifications
+    private lastAlertKey: string | null = null;
+    private lastAlertAt: number = 0;
+    private editingTransactionId: string | null = null;
+
     constructor() {
         // Initialiser tous les managers
         this.dataManager = new DataManager();
@@ -11,32 +44,53 @@ class BudgetManager {
         this.savingsManager = new SavingsManager(this.dataManager);
         this.recurringManager = new RecurringManager(this.dataManager);
         this.exportManager = new ExportManager(this.dataManager);
-        
-        // Anti-spam notifications
-        this.lastAlertKey = null;
-        this.lastAlertAt = 0;
+        this.notificationManager = new NotificationManager(this.dataManager, this.uiManager);
+        this.dragDropManager = new DragDropManager(this.dataManager);
+        this.widgetManager = new WidgetManager(this.dataManager);
         
         this.init();
     }
 
-    async init() {
-        try {
-            await this.dataManager.loadData();
-        } catch (error) {
-            this.uiManager.showNotification('Erreur de connexion au serveur', 'error');
-            // Initialiser avec des données par défaut
-            this.dataManager.setData({
-                salary: 0,
-                currentMonth: new Date().toISOString().slice(0, 7),
-                categories: {},
-                transactions: [],
-                recurringTransactions: [],
-                savingsGoals: []
-            });
+    async init(): Promise<void> {
+        console.log('🚀 Initialisation de l\'application...');
+        
+        // Essayer de charger les données avec retry
+        let retries = 3;
+        let loaded = false;
+        
+        while (retries > 0 && !loaded) {
+            try {
+                await this.dataManager.loadData();
+                loaded = true;
+                console.log('✅ Données chargées avec succès');
+            } catch (error) {
+                retries--;
+                if (retries > 0) {
+                    console.log(`⚠️ Erreur chargement, nouvelle tentative... (${retries} restantes)`);
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Attendre 500ms
+                } else {
+                    console.error('❌ Impossible de charger les données après 3 tentatives');
+                    this.uiManager.showNotification('Erreur de connexion au serveur', 'error');
+                    // Initialiser avec des données par défaut
+                    this.dataManager.setData({
+                        salary: 0,
+                        currentMonth: new Date().toISOString().slice(0, 7),
+                        categories: {},
+                        transactions: [],
+                        recurringTransactions: [],
+                        savingsGoals: []
+                    });
+                }
+            }
         }
         
         this.recurringManager.processRecurringTransactions();
-        this.setupEventListeners();
+        
+        // Attendre que le DOM soit complètement prêt
+        setTimeout(() => {
+            this.setupEventListeners();
+        }, 100);
+        
         this.uiManager.updateCurrentMonth();
         
         if (this.dataManager.isFirstTime()) {
@@ -44,16 +98,46 @@ class BudgetManager {
         } else {
             this.showDashboard();
         }
+        
+        // Demander la permission pour les notifications
+        this.notificationManager.requestNotificationPermission();
+        
+        // Démarrer les vérifications périodiques
+        this.notificationManager.startPeriodicChecks();
+        
+        // Écouter l'événement de rendu des catégories pour initialiser le drag & drop
+        window.addEventListener('categories-rendered', (e: Event) => {
+            const customEvent = e as CustomEvent;
+            const container = customEvent.detail.container;
+            if (container) {
+                this.dragDropManager.initializeDragDrop(container);
+            }
+        });
+        
+        // Écouter l'événement de réorganisation pour rafraîchir l'UI
+        window.addEventListener('categories-reordered', () => {
+            this.updateDashboard();
+            this.uiManager.showNotification('✅ Catégories réorganisées', 'success');
+        });
+        
+        console.log('✨ Application prête !');
     }
 
     // Afficher le dashboard
-    showDashboard() {
+    showDashboard(): void {
         this.uiManager.showDashboard();
-        this.updateDashboard();
+        
+        // Attendre que le DOM soit mis à jour avant de mettre à jour les données
+        setTimeout(() => {
+            this.updateDashboard();
+            
+            // Restaurer le layout des widgets
+            this.widgetManager.restoreLayout();
+        }, 50);
     }
 
     // Mettre à jour tout le dashboard
-    updateDashboard() {
+    updateDashboard(): void {
         const totalSpent = this.transactionManager.getTotalSpent();
         const data = this.dataManager.getData();
         const remaining = data.salary - totalSpent;
@@ -65,16 +149,15 @@ class BudgetManager {
         this.chartManager.updateChart();
         this.updateSavingsGoals();
         this.updateRecurringTransactions();
-        this.updateAdvancedStats();
-        this.updateBudgetPredictions();
-        this.updateMonthlyComparison();
         this.updateTopExpenses();
     }
 
     // Configuration initiale
-    setupEventListeners() {
+    setupEventListeners(): void {
+        console.log('🔧 Configuration des event listeners...');
+        
         // Formulaire de configuration
-        document.getElementById('setup-form').addEventListener('submit', (e) => {
+        document.getElementById('setup-form')!.addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleSetup();
         });
@@ -94,176 +177,234 @@ class BudgetManager {
         const restButtons = document.querySelectorAll('.btn-rest');
         restButtons.forEach(button => {
             button.addEventListener('click', (e) => {
-                this.allocateRemainingBudget(e.target.dataset.category);
+                const target = e.target as HTMLElement;
+                this.allocateRemainingBudget(target.dataset.category!);
             });
         });
 
         // Formulaire d'ajout de dépense
-        document.getElementById('expense-form').addEventListener('submit', (e) => {
+        document.getElementById('expense-form')!.addEventListener('submit', (e) => {
             e.preventDefault();
             this.addExpense();
         });
 
         // Bouton d'édition des budgets
-        document.getElementById('edit-budget-btn').addEventListener('click', () => {
+        document.getElementById('edit-budget-btn')!.addEventListener('click', () => {
             this.openEditBudgetModal();
         });
 
         // Bouton voir toutes les transactions
-        document.getElementById('show-all-transactions-btn').addEventListener('click', () => {
+        document.getElementById('show-all-transactions-btn')!.addEventListener('click', () => {
             this.openTransactionsModal('all');
         });
 
         // Event listeners pour les transactions
         document.addEventListener('click', (e) => {
-            if (e.target.matches('[data-category="all"]')) {
+            const target = e.target as HTMLElement;
+            
+            if (target.matches('[data-category="all"]')) {
                 this.uiManager.updateButtonColors('all');
-                const searchTerm = document.getElementById('transaction-search')?.value || '';
+                const searchTerm = (document.getElementById('transaction-search') as HTMLInputElement)?.value || '';
                 this.filterTransactions('all', searchTerm);
             }
             
-            if (e.target.closest('.edit-transaction-btn')) {
-                const transactionId = e.target.closest('.edit-transaction-btn').dataset.transactionId;
+            if (target.closest('.edit-transaction-btn')) {
+                const transactionId = target.closest<HTMLElement>('.edit-transaction-btn')!.dataset.transactionId!;
                 this.openEditTransactionModal(transactionId);
             }
             
-            if (e.target.closest('.delete-transaction-btn')) {
-                const transactionId = e.target.closest('.delete-transaction-btn').dataset.transactionId;
+            if (target.closest('.delete-transaction-btn')) {
+                const transactionId = target.closest<HTMLElement>('.delete-transaction-btn')!.dataset.transactionId!;
                 this.deleteTransaction(transactionId);
             }
         });
 
         // Paramètres
-        document.getElementById('settings-btn').addEventListener('click', () => {
-            document.getElementById('settings-modal').classList.remove('hidden');
+        document.getElementById('settings-btn')!.addEventListener('click', () => {
+            document.getElementById('settings-modal')!.classList.remove('hidden');
         });
 
-        document.querySelector('.close-modal').addEventListener('click', () => {
-            document.getElementById('settings-modal').classList.add('hidden');
+        document.querySelector('.close-modal')!.addEventListener('click', () => {
+            document.getElementById('settings-modal')!.classList.add('hidden');
         });
 
         // Modal d'édition des budgets
         document.querySelectorAll('.close-edit-modal').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.getElementById('edit-budget-modal').classList.add('hidden');
+                document.getElementById('edit-budget-modal')!.classList.add('hidden');
             });
         });
 
-        document.getElementById('edit-budget-form').addEventListener('submit', (e) => {
+        document.getElementById('edit-budget-form')!.addEventListener('submit', (e) => {
             e.preventDefault();
             this.saveEditedBudgets();
         });
 
-        document.getElementById('edit-salary').addEventListener('input', () => {
+        document.getElementById('edit-salary')!.addEventListener('input', () => {
             this.updateEditTotals();
         });
 
         // Modal des transactions
         document.querySelectorAll('.close-all-transactions-modal').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.getElementById('all-transactions-modal').classList.add('hidden');
+                document.getElementById('all-transactions-modal')!.classList.add('hidden');
             });
         });
 
-        document.getElementById('all-transactions-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'all-transactions-modal') {
-                document.getElementById('all-transactions-modal').classList.add('hidden');
+        document.getElementById('all-transactions-modal')!.addEventListener('click', (e) => {
+            if ((e.target as HTMLElement).id === 'all-transactions-modal') {
+                document.getElementById('all-transactions-modal')!.classList.add('hidden');
             }
         });
 
         // Modal d'édition de transaction
         document.querySelectorAll('.close-edit-transaction-modal').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.getElementById('edit-transaction-modal').classList.add('hidden');
+                document.getElementById('edit-transaction-modal')!.classList.add('hidden');
             });
         });
 
-        document.getElementById('edit-transaction-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'edit-transaction-modal') {
-                document.getElementById('edit-transaction-modal').classList.add('hidden');
+        document.getElementById('edit-transaction-modal')!.addEventListener('click', (e) => {
+            if ((e.target as HTMLElement).id === 'edit-transaction-modal') {
+                document.getElementById('edit-transaction-modal')!.classList.add('hidden');
             }
         });
 
-        document.getElementById('edit-transaction-form').addEventListener('submit', (e) => {
+        document.getElementById('edit-transaction-form')!.addEventListener('submit', (e) => {
             e.preventDefault();
             this.saveEditedTransaction();
         });
 
-        // Actions
-        document.getElementById('reset-month-btn').addEventListener('click', () => {
-            this.resetMonth();
+        // Actions - Utilisation de l'event delegation pour les boutons dans les modals
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            
+            // Réinitialiser le mois
+            if (target.closest('#reset-month-btn')) {
+                console.log('🔄 Réinitialiser le mois cliqué');
+                e.preventDefault();
+                this.resetMonth();
+            }
+            
+            // Export données
+            if (target.closest('#export-data-btn')) {
+                console.log('💾 Export données cliqué');
+                e.preventDefault();
+                this.exportData();
+            }
+            
+            // Import données
+            if (target.closest('#import-data-btn')) {
+                console.log('📥 Import données cliqué');
+                e.preventDefault();
+                document.getElementById('import-file')!.click();
+            }
+            
+            // Charger template
+            if (target.closest('#load-template-btn')) {
+                console.log('🎨 Charger template cliqué');
+                e.preventDefault();
+                this.showTemplateModal();
+            }
+            
+            // Tout réinitialiser
+            if (target.closest('#reset-all-btn')) {
+                console.log('🗑️ Tout réinitialiser cliqué');
+                e.preventDefault();
+                if (confirm('Êtes-vous sûr de vouloir tout réinitialiser ? Cette action est irréversible.')) {
+                    this.resetAll();
+                }
+            }
         });
 
-        document.getElementById('export-data-btn').addEventListener('click', () => {
-            this.exportData();
-        });
-
-        document.getElementById('import-data-btn').addEventListener('click', () => {
-            document.getElementById('import-file').click();
-        });
-
-        document.getElementById('import-file').addEventListener('change', (e) => {
-            this.importData(e);
+        document.getElementById('import-file')!.addEventListener('change', (e) => {
+            this.importData(e as Event);
         });
 
         // Toggle theme
-        document.getElementById('theme-toggle').addEventListener('click', () => {
+        document.getElementById('theme-toggle')!.addEventListener('click', () => {
             this.toggleTheme();
         });
 
+        // Mode Édition
+        document.getElementById('edit-mode-btn')!.addEventListener('click', () => {
+            const isEditMode = this.widgetManager.toggleEditMode();
+            const btn = document.getElementById('edit-mode-btn')!;
+            
+            if (isEditMode) {
+                btn.classList.remove('bg-purple-500', 'hover:bg-purple-600');
+                btn.classList.add('bg-green-500', 'hover:bg-green-600');
+                btn.innerHTML = '<i class="fas fa-save"></i> <span class="hidden md:inline">Sauvegarder</span>';
+                this.uiManager.showNotification('🎨 Mode Édition activé - Les widgets masqués apparaissent en grisé', 'info');
+            } else {
+                btn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                btn.classList.add('bg-purple-500', 'hover:bg-purple-600');
+                btn.innerHTML = '<i class="fas fa-edit"></i> <span class="hidden md:inline">Éditer</span>';
+                this.uiManager.showNotification('✅ Layout sauvegardé', 'success');
+            }
+        });
+
+        // Modal de gestion des widgets
+        document.querySelectorAll('.close-widgets-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.widgetManager.closeWidgetsModal();
+            });
+        });
+
+        document.getElementById('reset-layout-btn')!.addEventListener('click', () => {
+            this.widgetManager.resetLayout();
+        });
+
         // Export PDF
-        document.getElementById('export-pdf-btn').addEventListener('click', () => {
+        document.getElementById('export-pdf-btn')!.addEventListener('click', () => {
             this.exportToPDF();
         });
 
         // Transactions récurrentes
-        document.getElementById('add-recurring-btn').addEventListener('click', () => {
+        document.getElementById('add-recurring-btn')!.addEventListener('click', () => {
             this.openRecurringModal();
         });
 
         document.querySelectorAll('.close-recurring-modal').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.getElementById('recurring-modal').classList.add('hidden');
+                document.getElementById('recurring-modal')!.classList.add('hidden');
             });
         });
 
-        document.getElementById('recurring-form').addEventListener('submit', (e) => {
+        document.getElementById('recurring-form')!.addEventListener('submit', (e) => {
             e.preventDefault();
             this.addRecurringTransaction();
         });
 
-        // Templates de budget
-        document.getElementById('load-template-btn').addEventListener('click', () => {
-            this.showTemplateModal();
-        });
-
+        // Templates de budget - Fermeture du modal
         document.querySelectorAll('.close-template-modal').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.getElementById('template-modal').classList.add('hidden');
+                document.getElementById('template-modal')!.classList.add('hidden');
             });
         });
 
         // Nouvelle catégorie
-        document.getElementById('add-category-btn').addEventListener('click', () => {
-            document.getElementById('new-category-modal').classList.remove('hidden');
+        document.getElementById('add-category-btn')!.addEventListener('click', () => {
+            document.getElementById('new-category-modal')!.classList.remove('hidden');
         });
 
         document.querySelectorAll('.close-new-category-modal').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.getElementById('new-category-modal').classList.add('hidden');
+                document.getElementById('new-category-modal')!.classList.add('hidden');
             });
         });
 
-        document.getElementById('new-category-form').addEventListener('submit', (e) => {
+        document.getElementById('new-category-form')!.addEventListener('submit', (e) => {
             e.preventDefault();
             this.addNewCategory();
         });
 
         // Sélecteurs de couleur prédéfinis
         document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('color-preset')) {
-                const color = e.target.dataset.color;
-                document.getElementById('new-category-color').value = color;
+            const target = e.target as HTMLElement;
+            if (target.classList.contains('color-preset')) {
+                const color = target.dataset.color!;
+                (document.getElementById('new-category-color') as HTMLInputElement).value = color;
             }
         });
 
@@ -282,7 +423,7 @@ class BudgetManager {
             });
             
             quickModal.addEventListener('click', (e) => {
-                if (e.target.id === 'quick-expense-modal') quickModal.classList.add('hidden');
+                if ((e.target as HTMLElement).id === 'quick-expense-modal') quickModal.classList.add('hidden');
             });
 
             quickForm.addEventListener('submit', (e) => {
@@ -295,7 +436,7 @@ class BudgetManager {
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'n') {
                 e.preventDefault();
-                document.getElementById('expense-amount').focus();
+                document.getElementById('expense-amount')!.focus();
                 this.uiManager.showNotification('💡 Raccourci: Nouvelle dépense');
             } else if (e.ctrlKey && e.key === 't') {
                 e.preventDefault();
@@ -311,36 +452,32 @@ class BudgetManager {
 
         // Recherche dans les transactions
         document.addEventListener('input', (e) => {
-            if (e.target.id === 'transaction-search') {
-                this.handleTransactionSearch(e.target.value);
+            const target = e.target as HTMLElement;
+            if (target.id === 'transaction-search') {
+                this.handleTransactionSearch((target as HTMLInputElement).value);
             }
         });
 
         document.addEventListener('click', (e) => {
-            if (e.target.closest('#clear-search')) {
-                document.getElementById('transaction-search').value = '';
-                document.getElementById('clear-search').classList.add('hidden');
+            const target = e.target as HTMLElement;
+            if (target.closest('#clear-search')) {
+                (document.getElementById('transaction-search') as HTMLInputElement).value = '';
+                document.getElementById('clear-search')!.classList.add('hidden');
                 this.handleTransactionSearch('');
             }
         });
 
-        document.getElementById('reset-all-btn').addEventListener('click', () => {
-            if (confirm('Êtes-vous sûr de vouloir tout réinitialiser ? Cette action est irréversible.')) {
-                this.resetAll();
-            }
-        });
-
-        document.getElementById('settings-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'settings-modal') {
-                document.getElementById('settings-modal').classList.add('hidden');
+        document.getElementById('settings-modal')!.addEventListener('click', (e) => {
+            if ((e.target as HTMLElement).id === 'settings-modal') {
+                document.getElementById('settings-modal')!.classList.add('hidden');
             }
         });
     }
 
     // Gestion du setup initial
-    handleSetup() {
-        const salary = parseFloat(document.getElementById('monthly-salary').value);
-        const categoryInputs = document.querySelectorAll('#categories-setup input[type="number"]');
+    handleSetup(): void {
+        const salary = parseFloat((document.getElementById('monthly-salary') as HTMLInputElement).value);
+        const categoryInputs = document.querySelectorAll<HTMLInputElement>('#categories-setup input[type="number"]');
         
         if (salary <= 0) {
             alert('Veuillez saisir un salaire valide');
@@ -379,11 +516,11 @@ class BudgetManager {
     }
 
     // Mise à jour du total alloué
-    updateTotalAmount() {
-        const salaryInput = document.getElementById('monthly-salary');
+    updateTotalAmount(): void {
+        const salaryInput = document.getElementById('monthly-salary') as HTMLInputElement;
         const salary = parseFloat(salaryInput.value) || 0;
         
-        const inputs = document.querySelectorAll('#categories-setup input[type="number"]');
+        const inputs = document.querySelectorAll<HTMLInputElement>('#categories-setup input[type="number"]');
         let totalAllocated = 0;
         inputs.forEach(input => {
             totalAllocated += parseFloat(input.value) || 0;
@@ -393,9 +530,9 @@ class BudgetManager {
     }
 
     // Allouer le budget restant
-    allocateRemainingBudget(categoryKey) {
+    allocateRemainingBudget(categoryKey: string): void {
         try {
-            const salaryInput = document.getElementById('monthly-salary');
+            const salaryInput = document.getElementById('monthly-salary') as HTMLInputElement;
             const salary = parseFloat(salaryInput.value) || 0;
             
             if (salary === 0) {
@@ -410,46 +547,46 @@ class BudgetManager {
                 return;
             }
             
-            const targetInput = document.querySelector(`input[name="${categoryKey}"]`);
+            const targetInput = document.querySelector<HTMLInputElement>(`input[name="${categoryKey}"]`);
             if (targetInput) {
                 targetInput.value = remaining.toFixed(2);
                 this.updateTotalAmount();
                 this.uiManager.showNotification(`${remaining.toFixed(2)}€ alloués`);
             }
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
     // Ajouter une dépense
-    addExpense() {
+    addExpense(): void {
         try {
-            const category = document.getElementById('expense-category').value;
-            const amount = parseFloat(document.getElementById('expense-amount').value);
-            const description = document.getElementById('expense-description').value;
+            const category = (document.getElementById('expense-category') as HTMLSelectElement).value;
+            const amount = parseFloat((document.getElementById('expense-amount') as HTMLInputElement).value);
+            const description = (document.getElementById('expense-description') as HTMLInputElement).value;
 
-            const transaction = this.transactionManager.addExpense(category, amount, description);
+            this.transactionManager.addExpense(category, amount, description);
             this.dataManager.saveData();
             this.updateDashboard();
 
-            document.getElementById('expense-form').reset();
+            (document.getElementById('expense-form') as HTMLFormElement).reset();
             
             const data = this.dataManager.getData();
             this.uiManager.showNotification(`Dépense de ${amount.toFixed(2)}€ ajoutée à ${data.categories[category].name}`);
             this.checkAdvancedAlerts({ changedCategory: category });
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
     // Ajouter une dépense rapide
-    addQuickExpense() {
+    addQuickExpense(): void {
         try {
-            const category = document.getElementById('quick-expense-category')?.value || '';
-            const amount = parseFloat(document.getElementById('quick-expense-amount')?.value || '0');
-            const description = document.getElementById('quick-expense-description')?.value || '';
+            const category = (document.getElementById('quick-expense-category') as HTMLSelectElement)?.value || '';
+            const amount = parseFloat((document.getElementById('quick-expense-amount') as HTMLInputElement)?.value || '0');
+            const description = (document.getElementById('quick-expense-description') as HTMLInputElement)?.value || '';
             
-            const transaction = this.transactionManager.addExpense(category, amount, description);
+            this.transactionManager.addExpense(category, amount, description);
             this.dataManager.saveData();
             this.updateDashboard();
             
@@ -457,17 +594,17 @@ class BudgetManager {
             this.uiManager.showNotification(`Dépense de ${amount.toFixed(2)}€ ajoutée à ${data.categories[category].name}`);
             this.checkAdvancedAlerts({ changedCategory: category });
             
-            document.getElementById('quick-expense-form').reset();
-            document.getElementById('quick-expense-modal').classList.add('hidden');
+            (document.getElementById('quick-expense-form') as HTMLFormElement).reset();
+            document.getElementById('quick-expense-modal')!.classList.add('hidden');
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
     // Ouvrir le modal d'ajout rapide
-    openQuickExpenseModal() {
+    openQuickExpenseModal(): void {
         const data = this.dataManager.getData();
-        const select = document.getElementById('quick-expense-category');
+        const select = document.getElementById('quick-expense-category') as HTMLSelectElement;
         
         if (select) {
             select.innerHTML = '<option value="">Choisir une catégorie</option>';
@@ -479,42 +616,39 @@ class BudgetManager {
             });
         }
         
-        document.getElementById('quick-expense-modal').classList.remove('hidden');
+        document.getElementById('quick-expense-modal')!.classList.remove('hidden');
         setTimeout(() => document.getElementById('quick-expense-amount')?.focus(), 50);
     }
 
     // Toggle theme
-    toggleTheme() {
+    toggleTheme(): void {
         const result = this.themeManager.toggleTheme();
         this.uiManager.showNotification(result.message);
         
-        if (this.chartManager.chart) {
+        if (this.chartManager) {
             this.chartManager.updateChart();
-        }
-        if (this.chartManager.evolutionChart) {
-            try { this.chartManager.evolutionChart.destroy(); } catch(_){}
-            this.chartManager.evolutionChart = null;
         }
     }
 
     // Réinitialiser le mois
-    resetMonth() {
+    resetMonth(): void {
         this.dataManager.resetMonth();
         this.dataManager.saveData();
         this.updateDashboard();
         this.uiManager.showNotification('Nouveau mois initialisé !');
-        document.getElementById('settings-modal').classList.add('hidden');
+        document.getElementById('settings-modal')!.classList.add('hidden');
     }
 
     // Export des données
-    exportData() {
+    exportData(): void {
         this.exportManager.exportData();
         this.uiManager.showNotification('Données exportées avec succès !');
     }
 
     // Import des données
-    async importData(event) {
-        const file = event.target.files[0];
+    async importData(event: Event): Promise<void> {
+        const input = event.target as HTMLInputElement;
+        const file = input.files?.[0];
         if (!file) return;
 
         try {
@@ -528,24 +662,24 @@ class BudgetManager {
                 this.uiManager.showNotification('Données importées avec succès !');
             }
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
         
-        document.getElementById('settings-modal').classList.add('hidden');
+        document.getElementById('settings-modal')!.classList.add('hidden');
     }
 
     // Réinitialiser tout
-    async resetAll() {
+    async resetAll(): Promise<void> {
         this.dataManager.resetAll();
         await this.dataManager.saveData();
         location.reload();
     }
 
     // Export PDF
-    async exportToPDF() {
+    async exportToPDF(): Promise<void> {
         try {
             this.uiManager.showNotification('📄 Génération du PDF en cours...');
-            const filename = await this.exportManager.exportToPDF();
+            await this.exportManager.exportToPDF();
             this.uiManager.showNotification('✅ PDF exporté avec succès !');
         } catch (error) {
             console.error('Erreur export PDF:', error);
@@ -554,14 +688,14 @@ class BudgetManager {
     }
 
     // Vérification d'alertes avancées
-    checkAdvancedAlerts(context = {}) {
+    checkAdvancedAlerts(context: { changedCategory?: string } = {}): void {
         try {
             const data = this.dataManager.getData();
             const totalBudget = Object.values(data.categories).reduce((sum, cat) => sum + (cat.budget || 0), 0);
             const totalSpent = Object.values(data.categories).reduce((sum, cat) => sum + (cat.spent || 0), 0);
             const globalPercent = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
-            const messages = [];
+            const messages: string[] = [];
 
             if (globalPercent >= 100) {
                 messages.push('⚠️ Budget global dépassé !');
@@ -599,16 +733,16 @@ class BudgetManager {
         }
     }
 
-    // Méthodes déléguées aux managers (à compléter selon les besoins)
-    openEditBudgetModal() {
+    // Méthodes déléguées (suite dans le prochain fichier pour éviter la limite de taille)
+    openEditBudgetModal(): void {
         this.uiManager.openEditBudgetModal();
         this.populateEditCategories();
         this.updateEditTotals();
     }
 
-    populateEditCategories() {
+    populateEditCategories(): void {
         const data = this.dataManager.getData();
-        const container = document.getElementById('edit-categories-list');
+        const container = document.getElementById('edit-categories-list')!;
         container.innerHTML = '';
 
         Object.entries(data.categories).forEach(([key, category]) => {
@@ -638,20 +772,22 @@ class BudgetManager {
 
         container.querySelectorAll('.btn-edit-rest').forEach(button => {
             button.addEventListener('click', (e) => {
-                this.allocateRemainingEditBudget(e.target.dataset.category);
+                const target = e.target as HTMLElement;
+                this.allocateRemainingEditBudget(target.dataset.category!);
             });
         });
 
         container.querySelectorAll('.btn-delete-category').forEach(button => {
             button.addEventListener('click', (e) => {
-                this.deleteCategory(e.target.closest('button').dataset.category);
+                const target = e.target as HTMLElement;
+                this.deleteCategory(target.closest<HTMLElement>('button')!.dataset.category!);
             });
         });
     }
 
-    updateEditTotals() {
-        const salary = parseFloat(document.getElementById('edit-salary').value) || 0;
-        const inputs = document.querySelectorAll('.edit-category-input');
+    updateEditTotals(): void {
+        const salary = parseFloat((document.getElementById('edit-salary') as HTMLInputElement).value) || 0;
+        const inputs = document.querySelectorAll<HTMLInputElement>('.edit-category-input');
         
         let totalAllocated = 0;
         inputs.forEach(input => {
@@ -661,15 +797,15 @@ class BudgetManager {
         this.uiManager.updateEditTotals(salary, totalAllocated);
     }
 
-    allocateRemainingEditBudget(categoryKey) {
-        const salary = parseFloat(document.getElementById('edit-salary').value) || 0;
+    allocateRemainingEditBudget(categoryKey: string): void {
+        const salary = parseFloat((document.getElementById('edit-salary') as HTMLInputElement).value) || 0;
         
         if (salary === 0) {
             alert('Veuillez d\'abord saisir votre salaire mensuel');
             return;
         }
         
-        const inputs = document.querySelectorAll('.edit-category-input');
+        const inputs = document.querySelectorAll<HTMLInputElement>('.edit-category-input');
         let totalAllocated = 0;
         
         inputs.forEach(input => {
@@ -686,7 +822,7 @@ class BudgetManager {
             return;
         }
         
-        const targetInput = document.querySelector(`input[name="edit-${categoryKey}"]`);
+        const targetInput = document.querySelector<HTMLInputElement>(`input[name="edit-${categoryKey}"]`);
         if (targetInput) {
             targetInput.value = remaining.toFixed(2);
             this.updateEditTotals();
@@ -695,9 +831,9 @@ class BudgetManager {
         }
     }
 
-    saveEditedBudgets() {
-        const newSalary = parseFloat(document.getElementById('edit-salary').value);
-        const inputs = document.querySelectorAll('.edit-category-input');
+    saveEditedBudgets(): void {
+        const newSalary = parseFloat((document.getElementById('edit-salary') as HTMLInputElement).value);
+        const inputs = document.querySelectorAll<HTMLInputElement>('.edit-category-input');
         
         if (newSalary <= 0) {
             alert('Veuillez saisir un salaire valide');
@@ -730,31 +866,31 @@ class BudgetManager {
         this.dataManager.saveData();
         this.updateDashboard();
         
-        document.getElementById('edit-budget-modal').classList.add('hidden');
+        document.getElementById('edit-budget-modal')!.classList.add('hidden');
         this.uiManager.showNotification('Budgets mis à jour avec succès !');
     }
 
-    addNewCategory() {
+    addNewCategory(): void {
         try {
-            const name = document.getElementById('new-category-name').value.trim();
-            const budget = parseFloat(document.getElementById('new-category-budget').value);
-            const color = document.getElementById('new-category-color').value;
+            const name = (document.getElementById('new-category-name') as HTMLInputElement).value.trim();
+            const budget = parseFloat((document.getElementById('new-category-budget') as HTMLInputElement).value);
+            const color = (document.getElementById('new-category-color') as HTMLInputElement).value;
 
-            const result = this.categoryManager.addCategory(name, budget, color);
+            this.categoryManager.addCategory(name, budget, color);
             this.dataManager.saveData();
             this.populateEditCategories();
             this.updateEditTotals();
             
-            document.getElementById('new-category-modal').classList.add('hidden');
-            document.getElementById('new-category-form').reset();
+            document.getElementById('new-category-modal')!.classList.add('hidden');
+            (document.getElementById('new-category-form') as HTMLFormElement).reset();
             
             this.uiManager.showNotification(`Catégorie "${name}" créée avec succès ! 🎉`);
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
-    deleteCategory(categoryKey) {
+    deleteCategory(categoryKey: string): void {
         try {
             const result = this.categoryManager.deleteCategory(categoryKey);
             
@@ -764,7 +900,6 @@ class BudgetManager {
             }
 
             if (!confirm(confirmMessage)) {
-                // Restaurer la catégorie si l'utilisateur annule
                 const data = this.dataManager.getData();
                 data.categories[categoryKey] = result.category;
                 return;
@@ -776,14 +911,14 @@ class BudgetManager {
             
             this.uiManager.showNotification(`Catégorie "${result.category.name}" supprimée`);
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
     // Gestion des transactions
-    openTransactionsModal(initialFilter = 'all') {
+    openTransactionsModal(initialFilter: string = 'all'): void {
         const data = this.dataManager.getData();
-        const filtersContainer = document.getElementById('category-filters');
+        const filtersContainer = document.getElementById('category-filters')!;
         
         if (filtersContainer.children.length === 0) {
             Object.entries(data.categories).forEach(([key, category]) => {
@@ -792,9 +927,10 @@ class BudgetManager {
                 filterBtn.dataset.category = key;
                 filterBtn.textContent = category.name;
                 filterBtn.addEventListener('click', (e) => {
-                    this.uiManager.updateButtonColors(e.target.dataset.category);
-                    const searchTerm = document.getElementById('transaction-search')?.value || '';
-                    this.filterTransactions(e.target.dataset.category, searchTerm);
+                    const target = e.target as HTMLElement;
+                    this.uiManager.updateButtonColors(target.dataset.category!);
+                    const searchTerm = (document.getElementById('transaction-search') as HTMLInputElement)?.value || '';
+                    this.filterTransactions(target.dataset.category!, searchTerm);
                 });
                 filtersContainer.appendChild(filterBtn);
             });
@@ -803,11 +939,11 @@ class BudgetManager {
         this.uiManager.updateButtonColors(initialFilter);
         this.filterTransactions(initialFilter);
         
-        document.getElementById('all-transactions-modal').classList.remove('hidden');
+        document.getElementById('all-transactions-modal')!.classList.remove('hidden');
     }
 
-    handleTransactionSearch(searchTerm) {
-        const clearBtn = document.getElementById('clear-search');
+    handleTransactionSearch(searchTerm: string): void {
+        const clearBtn = document.getElementById('clear-search')!;
         
         if (searchTerm.trim() === '') {
             clearBtn.classList.add('hidden');
@@ -815,29 +951,29 @@ class BudgetManager {
             clearBtn.classList.remove('hidden');
         }
         
-        const activeFilter = document.querySelector('.filter-btn.active')?.dataset.category || 'all';
+        const activeFilter = document.querySelector<HTMLElement>('.filter-btn.active')?.dataset.category || 'all';
         this.filterTransactions(activeFilter, searchTerm);
     }
 
-    filterTransactions(categoryFilter, searchTerm = '') {
+    filterTransactions(categoryFilter: string, searchTerm: string = ''): void {
         const data = this.dataManager.getData();
-        const modalTitle = document.getElementById('transactions-modal-title');
-        const categoryStats = document.getElementById('category-stats');
-        const globalStats = document.getElementById('global-stats');
+        const modalTitle = document.getElementById('transactions-modal-title')!;
+        const categoryStats = document.getElementById('category-stats')!;
+        const globalStats = document.getElementById('global-stats')!;
         
         if (categoryFilter === 'all') {
             modalTitle.textContent = 'Toutes les Transactions';
             categoryStats.classList.add('hidden');
             
             const stats = this.transactionManager.getGlobalStats();
-            document.getElementById('global-budget').textContent = `${stats.budget.toFixed(2)}€`;
-            document.getElementById('global-spent').textContent = `${stats.spent.toFixed(2)}€`;
-            document.getElementById('global-remaining').textContent = `${stats.remaining.toFixed(2)}€`;
-            document.getElementById('global-percentage').textContent = `${stats.percentage.toFixed(1)}% utilisé`;
+            document.getElementById('global-budget')!.textContent = `${stats.budget.toFixed(2)}€`;
+            document.getElementById('global-spent')!.textContent = `${stats.spent.toFixed(2)}€`;
+            document.getElementById('global-remaining')!.textContent = `${stats.remaining.toFixed(2)}€`;
+            document.getElementById('global-percentage')!.textContent = `${stats.percentage.toFixed(1)}% utilisé`;
             
-            const progressBar = document.getElementById('global-progress-bar');
+            const progressBar = document.getElementById('global-progress-bar')!;
             const progressWidth = Math.min(stats.percentage, 100);
-            progressBar.style.width = `${progressWidth}%`;
+            (progressBar as HTMLElement).style.width = `${progressWidth}%`;
             
             if (stats.percentage > 100) {
                 progressBar.className = 'h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-700 ease-out relative shadow-sm';
@@ -854,21 +990,23 @@ class BudgetManager {
             globalStats.classList.add('hidden');
             
             const stats = this.transactionManager.getCategoryStats(categoryFilter);
-            document.getElementById('stats-budget').textContent = `${stats.budget.toFixed(2)}€`;
-            document.getElementById('stats-spent').textContent = `${stats.spent.toFixed(2)}€`;
-            document.getElementById('stats-remaining').textContent = `${stats.remaining.toFixed(2)}€`;
-            document.getElementById('stats-percentage').textContent = `${stats.percentage.toFixed(1)}% utilisé`;
-            
-            const progressBar = document.getElementById('stats-progress-bar');
-            const progressWidth = Math.min(stats.percentage, 100);
-            progressBar.style.width = `${progressWidth}%`;
-            
-            if (stats.percentage > 100) {
-                progressBar.className = 'h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-700 ease-out relative shadow-sm';
-            } else if (stats.percentage > 80) {
-                progressBar.className = 'h-full bg-gradient-to-r from-yellow-500 to-orange-500 transition-all duration-700 ease-out relative shadow-sm';
-            } else {
-                progressBar.className = 'h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-700 ease-out relative shadow-sm';
+            if (stats) {
+                document.getElementById('stats-budget')!.textContent = `${stats.budget.toFixed(2)}€`;
+                document.getElementById('stats-spent')!.textContent = `${stats.spent.toFixed(2)}€`;
+                document.getElementById('stats-remaining')!.textContent = `${stats.remaining.toFixed(2)}€`;
+                document.getElementById('stats-percentage')!.textContent = `${stats.percentage.toFixed(1)}% utilisé`;
+                
+                const progressBar = document.getElementById('stats-progress-bar')!;
+                const progressWidth = Math.min(stats.percentage, 100);
+                (progressBar as HTMLElement).style.width = `${progressWidth}%`;
+                
+                if (stats.percentage > 100) {
+                    progressBar.className = 'h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-700 ease-out relative shadow-sm';
+                } else if (stats.percentage > 80) {
+                    progressBar.className = 'h-full bg-gradient-to-r from-yellow-500 to-orange-500 transition-all duration-700 ease-out relative shadow-sm';
+                } else {
+                    progressBar.className = 'h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-700 ease-out relative shadow-sm';
+                }
             }
             
             categoryStats.classList.remove('hidden');
@@ -876,8 +1014,8 @@ class BudgetManager {
         
         const filteredTransactions = this.transactionManager.filterTransactions(categoryFilter, searchTerm);
         
-        const container = document.getElementById('all-transactions-list');
-        const noTransactions = document.getElementById('no-transactions');
+        const container = document.getElementById('all-transactions-list')!;
+        const noTransactions = document.getElementById('no-transactions')!;
         
         if (filteredTransactions.length === 0) {
             container.classList.add('hidden');
@@ -890,6 +1028,12 @@ class BudgetManager {
             filteredTransactions.reverse().forEach(transaction => {
                 const date = new Date(transaction.date);
                 const category = data.categories[transaction.category];
+                
+                // Ignorer les transactions avec catégorie supprimée
+                if (!category) {
+                    console.warn(`⚠️ Transaction avec catégorie inexistante: ${transaction.category}`);
+                    return;
+                }
                 
                 const transactionElement = document.createElement('div');
                 transactionElement.className = 'bg-white p-4 rounded-lg shadow-md border-l-4 border-red-400 hover:shadow-lg transition-shadow';
@@ -924,16 +1068,16 @@ class BudgetManager {
         }
     }
 
-    openEditTransactionModal(transactionId) {
+    openEditTransactionModal(transactionId: string): void {
         const transaction = this.transactionManager.getTransactionById(transactionId);
         if (!transaction) return;
 
-        document.getElementById('edit-transaction-category').value = transaction.category;
-        document.getElementById('edit-transaction-amount').value = transaction.amount;
-        document.getElementById('edit-transaction-description').value = transaction.description || '';
+        (document.getElementById('edit-transaction-category') as HTMLSelectElement).value = transaction.category;
+        (document.getElementById('edit-transaction-amount') as HTMLInputElement).value = transaction.amount.toString();
+        (document.getElementById('edit-transaction-description') as HTMLInputElement).value = transaction.description || '';
 
         const data = this.dataManager.getData();
-        const categorySelect = document.getElementById('edit-transaction-category');
+        const categorySelect = document.getElementById('edit-transaction-category') as HTMLSelectElement;
         categorySelect.innerHTML = '<option value="">Choisir une catégorie</option>';
         Object.entries(data.categories).forEach(([key, category]) => {
             const option = document.createElement('option');
@@ -946,31 +1090,31 @@ class BudgetManager {
         });
 
         this.editingTransactionId = transactionId;
-        document.getElementById('edit-transaction-modal').classList.remove('hidden');
+        document.getElementById('edit-transaction-modal')!.classList.remove('hidden');
     }
 
-    saveEditedTransaction() {
+    saveEditedTransaction(): void {
         try {
-            const transactionId = this.editingTransactionId;
-            const newCategory = document.getElementById('edit-transaction-category').value;
-            const newAmount = parseFloat(document.getElementById('edit-transaction-amount').value);
-            const newDescription = document.getElementById('edit-transaction-description').value;
+            const transactionId = this.editingTransactionId!;
+            const newCategory = (document.getElementById('edit-transaction-category') as HTMLSelectElement).value;
+            const newAmount = parseFloat((document.getElementById('edit-transaction-amount') as HTMLInputElement).value);
+            const newDescription = (document.getElementById('edit-transaction-description') as HTMLInputElement).value;
 
-            const result = this.transactionManager.editTransaction(transactionId, newCategory, newAmount, newDescription);
+            this.transactionManager.editTransaction(transactionId, newCategory, newAmount, newDescription);
             this.dataManager.saveData();
             this.updateDashboard();
 
-            document.getElementById('edit-transaction-modal').classList.add('hidden');
+            document.getElementById('edit-transaction-modal')!.classList.add('hidden');
             this.editingTransactionId = null;
 
             this.uiManager.showNotification('Transaction modifiée avec succès !');
             this.checkAdvancedAlerts({ changedCategory: newCategory });
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
-    deleteTransaction(transactionId) {
+    deleteTransaction(transactionId: string): void {
         try {
             const transaction = this.transactionManager.getTransactionById(transactionId);
             if (!transaction) return;
@@ -986,32 +1130,32 @@ class BudgetManager {
             this.uiManager.showNotification('Transaction supprimée avec succès !');
             this.checkAdvancedAlerts();
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
     // Objectifs d'épargne
-    addSavingsGoal() {
+    addSavingsGoal(): void {
         try {
-            const name = document.getElementById('goal-name').value;
-            const target = parseFloat(document.getElementById('goal-target').value);
-            const deadline = document.getElementById('goal-deadline').value;
-            const current = parseFloat(document.getElementById('goal-current').value) || 0;
+            const name = (document.getElementById('goal-name') as HTMLInputElement).value;
+            const target = parseFloat((document.getElementById('goal-target') as HTMLInputElement).value);
+            const deadline = (document.getElementById('goal-deadline') as HTMLInputElement).value;
+            const current = parseFloat((document.getElementById('goal-current') as HTMLInputElement).value) || 0;
 
-            const goal = this.savingsManager.addSavingsGoal(name, target, deadline, current);
+            this.savingsManager.addSavingsGoal(name, target, deadline, current);
             this.dataManager.saveData();
             this.updateSavingsGoals();
             
-            document.getElementById('goal-modal').classList.add('hidden');
-            document.getElementById('goal-form').reset();
+            document.getElementById('goal-modal')!.classList.add('hidden');
+            (document.getElementById('goal-form') as HTMLFormElement).reset();
             
             this.uiManager.showNotification(`Objectif "${name}" créé avec succès ! 🎯`);
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
-    updateSavingsGoals() {
+    updateSavingsGoals(): void {
         const container = document.getElementById('savings-goals');
         if (!container) return;
         
@@ -1030,6 +1174,7 @@ class BudgetManager {
 
         container.innerHTML = goals.map(goal => {
             const progress = this.savingsManager.getGoalProgress(goal.id);
+            if (!progress) return '';
             
             return `
                 <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg transition-colors duration-300 ${progress.isCompleted ? 'border-2 border-green-500' : ''}">
@@ -1047,7 +1192,7 @@ class BudgetManager {
                             <p class="text-sm ${progress.daysLeft > 0 ? 'text-gray-600 dark:text-gray-400' : 'text-red-500'}">
                                 ${progress.daysLeft > 0 ? `${progress.daysLeft} jours restants` : 'Échéance dépassée'}
                             </p>
-                            <button class="text-red-500 hover:text-red-700 mt-1" onclick="budgetManager.deleteSavingsGoal('${goal.id}')">
+                            <button class="text-red-500 hover:text-red-700 mt-1 delete-goal-btn" data-goal-id="${goal.id}">
                                 <i class="fas fa-trash text-sm"></i>
                             </button>
                         </div>
@@ -1065,26 +1210,48 @@ class BudgetManager {
                     </div>
                     
                     <div class="flex gap-2">
-                        <button class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded text-sm transition-all duration-300" 
-                                onclick="budgetManager.addToGoal('${goal.id}')">
+                        <button class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded text-sm transition-all duration-300 add-to-goal-btn" 
+                                data-goal-id="${goal.id}">
                             <i class="fas fa-plus mr-1"></i> Ajouter
                         </button>
-                        <button class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-3 rounded text-sm transition-all duration-300" 
-                                onclick="budgetManager.editGoal('${goal.id}')">
+                        <button class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-3 rounded text-sm transition-all duration-300 edit-goal-btn" 
+                                data-goal-id="${goal.id}">
                             <i class="fas fa-edit mr-1"></i> Modifier
                         </button>
                     </div>
                 </div>
             `;
         }).join('');
+        
+        // Attacher les event listeners pour les boutons des objectifs
+        container.querySelectorAll('.delete-goal-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const goalId = (e.currentTarget as HTMLElement).dataset.goalId!;
+                this.deleteSavingsGoal(goalId);
+            });
+        });
+        
+        container.querySelectorAll('.add-to-goal-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const goalId = (e.currentTarget as HTMLElement).dataset.goalId!;
+                this.addToGoal(goalId);
+            });
+        });
+        
+        container.querySelectorAll('.edit-goal-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const goalId = (e.currentTarget as HTMLElement).dataset.goalId!;
+                this.editGoal(goalId);
+            });
+        });
     }
 
-    addToGoal(goalId) {
+    addToGoal(goalId: string): void {
         const amount = prompt('Montant à ajouter à l\'objectif (€):');
         if (!amount) return;
         
         try {
-            const result = this.savingsManager.addToGoal(goalId, amount);
+            const result = this.savingsManager.addToGoal(goalId, parseFloat(amount));
             this.dataManager.saveData();
             this.updateSavingsGoals();
             
@@ -1092,11 +1259,11 @@ class BudgetManager {
                 this.uiManager.showNotification(`🎉 Félicitations ! Objectif "${result.goal.name}" atteint !`);
             }
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
-    deleteSavingsGoal(goalId) {
+    deleteSavingsGoal(goalId: string): void {
         if (!confirm('Êtes-vous sûr de vouloir supprimer cet objectif ?')) return;
         
         try {
@@ -1105,15 +1272,15 @@ class BudgetManager {
             this.updateSavingsGoals();
             this.uiManager.showNotification('Objectif supprimé');
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
-    editGoal(goalId) {
+    editGoal(goalId: string): void {
         const goal = this.savingsManager.getGoalById(goalId);
         if (!goal) return;
         
-        const newAmount = prompt(`Modifier le montant épargné pour "${goal.name}":`, goal.current);
+        const newAmount = prompt(`Modifier le montant épargné pour "${goal.name}":`, goal.current.toString());
         if (newAmount === null) return;
         
         try {
@@ -1125,14 +1292,14 @@ class BudgetManager {
                 this.uiManager.showNotification(`🎉 Félicitations ! Objectif "${result.goal.name}" atteint !`);
             }
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
     // Transactions récurrentes
-    openRecurringModal() {
+    openRecurringModal(): void {
         const data = this.dataManager.getData();
-        const select = document.getElementById('recurring-category');
+        const select = document.getElementById('recurring-category') as HTMLSelectElement;
         
         if (select) {
             select.innerHTML = '<option value="">Choisir une catégorie</option>';
@@ -1144,32 +1311,32 @@ class BudgetManager {
             });
         }
         
-        document.getElementById('recurring-modal').classList.remove('hidden');
+        document.getElementById('recurring-modal')!.classList.remove('hidden');
     }
 
-    addRecurringTransaction() {
+    addRecurringTransaction(): void {
         try {
-            const name = document.getElementById('recurring-name').value;
-            const category = document.getElementById('recurring-category').value;
-            const amount = parseFloat(document.getElementById('recurring-amount').value);
-            const frequency = document.getElementById('recurring-frequency').value;
-            const day = parseInt(document.getElementById('recurring-day').value);
-            const active = document.getElementById('recurring-active').checked;
+            const name = (document.getElementById('recurring-name') as HTMLInputElement).value;
+            const category = (document.getElementById('recurring-category') as HTMLSelectElement).value;
+            const amount = parseFloat((document.getElementById('recurring-amount') as HTMLInputElement).value);
+            const frequency = (document.getElementById('recurring-frequency') as HTMLSelectElement).value as 'monthly' | 'weekly' | 'yearly';
+            const day = parseInt((document.getElementById('recurring-day') as HTMLInputElement).value);
+            const active = (document.getElementById('recurring-active') as HTMLInputElement).checked;
 
-            const recurring = this.recurringManager.addRecurringTransaction(name, category, amount, frequency, day, active);
+            this.recurringManager.addRecurringTransaction(name, category, amount, frequency, day, active);
             this.dataManager.saveData();
             this.updateRecurringTransactions();
             
-            document.getElementById('recurring-modal').classList.add('hidden');
-            document.getElementById('recurring-form').reset();
+            document.getElementById('recurring-modal')!.classList.add('hidden');
+            (document.getElementById('recurring-form') as HTMLFormElement).reset();
             
             this.uiManager.showNotification(`Transaction récurrente "${name}" créée !`);
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
-    updateRecurringTransactions() {
+    updateRecurringTransactions(): void {
         const container = document.getElementById('recurring-transactions');
         if (!container) return;
 
@@ -1195,29 +1362,44 @@ class BudgetManager {
                         <p class="text-sm text-gray-600 dark:text-gray-400">${category?.name || rec.category} • ${rec.amount.toFixed(2)}€ • ${rec.frequency}</p>
                     </div>
                     <div class="flex gap-2">
-                        <button class="text-${rec.active ? 'green' : 'gray'}-600 hover:text-${rec.active ? 'green' : 'gray'}-800" onclick="budgetManager.toggleRecurring('${rec.id}')">
+                        <button class="text-${rec.active ? 'green' : 'gray'}-600 hover:text-${rec.active ? 'green' : 'gray'}-800 toggle-recurring-btn" data-recurring-id="${rec.id}">
                             <i class="fas fa-${rec.active ? 'check-circle' : 'pause-circle'}"></i>
                         </button>
-                        <button class="text-red-600 hover:text-red-800" onclick="budgetManager.deleteRecurring('${rec.id}')">
+                        <button class="text-red-600 hover:text-red-800 delete-recurring-btn" data-recurring-id="${rec.id}">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </div>
             `;
         }).join('');
+        
+        // Attacher les event listeners pour les boutons des transactions récurrentes
+        container.querySelectorAll('.toggle-recurring-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const recurringId = (e.currentTarget as HTMLElement).dataset.recurringId!;
+                this.toggleRecurring(recurringId);
+            });
+        });
+        
+        container.querySelectorAll('.delete-recurring-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const recurringId = (e.currentTarget as HTMLElement).dataset.recurringId!;
+                this.deleteRecurring(recurringId);
+            });
+        });
     }
 
-    toggleRecurring(recurringId) {
+    toggleRecurring(recurringId: string): void {
         try {
             this.recurringManager.toggleRecurringTransaction(recurringId);
             this.dataManager.saveData();
             this.updateRecurringTransactions();
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
-    deleteRecurring(recurringId) {
+    deleteRecurring(recurringId: string): void {
         if (!confirm('Supprimer cette transaction récurrente ?')) return;
         
         try {
@@ -1226,12 +1408,12 @@ class BudgetManager {
             this.updateRecurringTransactions();
             this.uiManager.showNotification('Transaction récurrente supprimée');
         } catch (error) {
-            this.uiManager.showNotification(error.message, 'error');
+            this.uiManager.showNotification((error as Error).message, 'error');
         }
     }
 
     // Templates de budget
-    getBudgetTemplates() {
+    getBudgetTemplates(): Record<string, BudgetTemplate> {
         return {
             'etudiant': {
                 name: '🎓 Étudiant',
@@ -1308,13 +1490,13 @@ class BudgetManager {
         };
     }
 
-    showTemplateModal() {
-        const modal = document.getElementById('template-modal');
-        const container = document.getElementById('templates-list');
+    showTemplateModal(): void {
+        const modal = document.getElementById('template-modal')!;
+        const container = document.getElementById('templates-list')!;
         const templates = this.getBudgetTemplates();
 
         container.innerHTML = Object.entries(templates).map(([key, template]) => `
-            <div class="p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary dark:hover:border-blue-400 transition-all duration-300 cursor-pointer" onclick="budgetManager.loadTemplate('${key}')">
+            <div class="p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary dark:hover:border-blue-400 transition-all duration-300 cursor-pointer template-item" data-template="${key}">
                 <div class="text-3xl mb-2">${template.name.split(' ')[0]}</div>
                 <h4 class="font-bold text-lg text-gray-800 dark:text-gray-200 mb-2">${template.name.split(' ').slice(1).join(' ')}</h4>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">${template.description}</p>
@@ -1329,10 +1511,18 @@ class BudgetManager {
             </div>
         `).join('');
 
+        // Attacher les event listeners après création du HTML
+        container.querySelectorAll('.template-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const templateKey = (item as HTMLElement).dataset.template!;
+                this.loadTemplate(templateKey);
+            });
+        });
+
         modal.classList.remove('hidden');
     }
 
-    loadTemplate(templateKey) {
+    loadTemplate(templateKey: string): void {
         const templates = this.getBudgetTemplates();
         const template = templates[templateKey];
 
@@ -1362,24 +1552,11 @@ class BudgetManager {
         this.dataManager.saveData();
         this.updateDashboard();
         
-        document.getElementById('template-modal').classList.add('hidden');
+        document.getElementById('template-modal')!.classList.add('hidden');
         this.uiManager.showNotification(`Template "${template.name}" chargé avec succès ! 🎉`);
     }
 
-    // Méthodes pour les statistiques (stubs - à implémenter si nécessaire)
-    updateAdvancedStats() {
-        // Implémentation des statistiques avancées si nécessaire
-    }
-
-    updateBudgetPredictions() {
-        // Implémentation des prédictions budgétaires si nécessaire
-    }
-
-    updateMonthlyComparison() {
-        // Implémentation de la comparaison mensuelle si nécessaire
-    }
-
-    updateTopExpenses() {
+    updateTopExpenses(): void {
         const container = document.getElementById('top-expenses');
         if (!container) return;
         
@@ -1421,5 +1598,5 @@ class BudgetManager {
 // Initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
     const manager = new BudgetManager();
-    window.budgetManager = manager;
+    (window as any).budgetManager = manager;
 });

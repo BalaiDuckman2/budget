@@ -1,5 +1,9 @@
+import type { BudgetData } from '@/types';
+
 // Gestionnaire de données - Stockage serveur uniquement
-class DataManager {
+export class DataManager {
+    private data: BudgetData;
+
     constructor() {
         this.data = {
             salary: 0,
@@ -12,10 +16,10 @@ class DataManager {
     }
 
     // Chargement des données depuis le serveur
-    async loadData() {
+    async loadData(): Promise<BudgetData> {
         try {
             console.log('📡 Chargement des données depuis le serveur...');
-            const response = await window.apiClient.getData();
+            const response = await (window as any).apiClient.getData();
             this.data = response;
             
             // Initialiser les champs manquants pour compatibilité
@@ -43,10 +47,10 @@ class DataManager {
     }
 
     // Sauvegarde des données sur le serveur
-    async saveData() {
+    async saveData(): Promise<void> {
         try {
             console.log('💾 Sauvegarde des données sur le serveur...');
-            await window.apiClient.saveData(this.data);
+            await (window as any).apiClient.saveData(this.data);
             console.log('✅ Données sauvegardées sur le serveur');
         } catch (error) {
             console.error('❌ Erreur sauvegarde données:', error);
@@ -55,22 +59,22 @@ class DataManager {
     }
 
     // Vérifier si c'est la première utilisation
-    isFirstTime() {
+    isFirstTime(): boolean {
         return this.data.salary === 0 || Object.keys(this.data.categories).length === 0;
     }
 
     // Obtenir les données
-    getData() {
+    getData(): BudgetData {
         return this.data;
     }
 
     // Mettre à jour les données
-    setData(data) {
+    setData(data: BudgetData): void {
         this.data = data;
     }
 
     // Réinitialiser le mois
-    resetMonth() {
+    resetMonth(): void {
         Object.keys(this.data.categories).forEach(key => {
             this.data.categories[key].spent = 0;
         });
@@ -78,7 +82,7 @@ class DataManager {
     }
 
     // Réinitialiser tout
-    resetAll() {
+    resetAll(): void {
         this.data = {
             salary: 0,
             currentMonth: new Date().toISOString().slice(0, 7),
@@ -90,7 +94,7 @@ class DataManager {
     }
 
     // Export des données
-    exportData() {
+    exportData(): void {
         const dataStr = JSON.stringify(this.data, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
@@ -102,12 +106,12 @@ class DataManager {
     }
 
     // Import des données
-    async importData(file) {
+    async importData(file: File): Promise<BudgetData> {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const imported = JSON.parse(e.target.result);
+                    const imported = JSON.parse(e.target?.result as string);
                     this.data = imported;
                     resolve(this.data);
                 } catch (error) {
@@ -118,9 +122,4 @@ class DataManager {
             reader.readAsText(file);
         });
     }
-}
-
-// Export pour utilisation en module
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = DataManager;
 }
