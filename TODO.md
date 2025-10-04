@@ -50,7 +50,7 @@
 - [ ] **Heatmap** → Dépenses par jour de la semaine
 - [ ] **Graphiques en barres** → Comparaison catégories
 - [ ] **Indicateurs KPI** → Tableaux de bord
-- [ ] **Animations** → Transitions fluides
+- [x] **Animations** → Transitions fluides ✅ *Implémenté le 04/10/2025*
 
 ### 🎭 Personnalisation
 - [x] **Thèmes colorés** → Bleu, vert, rouge, etc. ✅ *Implémenté le 04/10/2025*
@@ -62,13 +62,13 @@
 ## 📱 Fonctionnalités Mobiles
 
 ### 📲 PWA (Progressive Web App)
-- [ ] **Installation** → Comme une app native
-- [ ] **Mode hors-ligne** → Fonctionne sans internet
-- [ ] **Notifications push** → Rappels et alertes
+- [x] **Installation** → Comme une app native ✅ *Implémenté le 04/10/2025*
+- [x] **Mode hors-ligne** → Fonctionne sans internet ✅ *Implémenté le 04/10/2025*
+- [x] **Notifications push** → Rappels et alertes ✅ *Implémenté le 04/10/2025*
 
 
 ### 📱 Optimisations Mobile
-- [ ] **Interface tactile** → Gestes swipe
-- [ ] **Responsive design** → Adaptation écrans
-- [ ] **Performance** → Chargement rapide
-- [ ] **Accessibilité** → Support lecteurs d'écran
+- [x] **Interface tactile** → Gestes swipe ✅ *Implémenté le 04/10/2025*
+- [x] **Responsive design** → Adaptation écrans ✅ *Implémenté le 04/10/2025*
+- [x] **Performance** → Chargement rapide ✅ *Implémenté le 04/10/2025*
+- [x] **Accessibilité** → Support lecteurs d'écran ✅ *Implémenté le 04/10/2025*

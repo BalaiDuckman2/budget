@@ -12,6 +12,7 @@ import { ExportManager } from './js/modules/ExportManager';
 import { DragDropManager } from './js/modules/DragDropManager';
 import { WidgetManager } from './js/modules/WidgetManager';
 import { CalendarManager } from './js/modules/CalendarManager';
+import { TouchGestureManager } from './js/modules/TouchGestureManager';
 import type { BudgetTemplate } from './types';
 
 // Gestionnaire de Budget Principal - Orchestrateur
@@ -29,6 +30,7 @@ class BudgetManager {
     private dragDropManager: DragDropManager;
     private widgetManager: WidgetManager;
     private calendarManager: CalendarManager;
+    private touchGestureManager: TouchGestureManager;
     
     // Anti-spam notifications
     private lastAlertKey: string | null = null;
@@ -50,6 +52,7 @@ class BudgetManager {
         this.dragDropManager = new DragDropManager(this.dataManager);
         this.widgetManager = new WidgetManager(this.dataManager);
         this.calendarManager = new CalendarManager(this.dataManager);
+        this.touchGestureManager = new TouchGestureManager();
         
         this.init();
     }
@@ -121,6 +124,20 @@ class BudgetManager {
         window.addEventListener('categories-reordered', () => {
             this.updateDashboard();
             this.uiManager.showNotification('✅ Catégories réorganisées', 'success');
+        });
+
+        // Gestes tactiles - Pull to refresh
+        window.addEventListener('pull-to-refresh', () => {
+            this.handlePullToRefresh();
+        });
+
+        // Gestes tactiles - Swipe pour supprimer
+        window.addEventListener('delete-transaction-swipe', (e: Event) => {
+            const customEvent = e as CustomEvent;
+            const transactionId = customEvent.detail.transactionId;
+            if (transactionId) {
+                this.deleteTransaction(transactionId);
+            }
         });
         
         console.log('✨ Application prête !');
@@ -1754,6 +1771,21 @@ class BudgetManager {
                 </div>
             `;
         }).join('');
+    }
+
+    // Pull to refresh
+    async handlePullToRefresh(): Promise<void> {
+        console.log('🔄 Pull to refresh...');
+        this.uiManager.showNotification('🔄 Actualisation...', 'info');
+        
+        try {
+            // Recharger les données depuis le serveur
+            await this.dataManager.loadData();
+            this.updateDashboard();
+            this.uiManager.showNotification('✅ Données actualisées', 'success');
+        } catch (error) {
+            this.uiManager.showNotification('❌ Erreur lors de l\'actualisation', 'error');
+        }
     }
 }
 
