@@ -7,11 +7,14 @@ WORKDIR /app
 # Copier package.json et package-lock.json
 COPY package*.json ./
 
-# Installer les dépendances
-RUN npm ci --only=production
+# Installer TOUTES les dépendances (dev + prod) pour le build
+RUN npm ci
 
 # Copier tous les fichiers de l'application
 COPY . .
+
+# Build avec Vite (compile TypeScript → JavaScript)
+RUN npm run build
 
 # Créer le dossier data avec les bonnes permissions
 RUN mkdir -p /app/data && chmod 777 /app/data

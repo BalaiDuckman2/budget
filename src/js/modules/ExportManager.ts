@@ -1,3 +1,4 @@
+import jsPDF from 'jspdf';
 import type { BudgetData } from '@/types';
 import type { DataManager } from './DataManager';
 
@@ -7,7 +8,6 @@ export class ExportManager {
 
     // Export en PDF
     async exportToPDF(): Promise<string> {
-        const { jsPDF } = (window as any).jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
         const data = this.dataManager.getData();
         
@@ -109,7 +109,7 @@ export class ExportManager {
         });
         
         // Pied de page
-        const pageCount = pdf.internal.getNumberOfPages();
+        const pageCount = (pdf as any).internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             pdf.setPage(i);
             pdf.setFontSize(8);

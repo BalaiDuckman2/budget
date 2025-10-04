@@ -19,9 +19,6 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         // Configuration Tailwind avec mode dark
@@ -921,7 +918,7 @@
     </div>
 
     <!-- API Client pour communication serveur -->
-    <script src="api-client.js"></script>
+    <script type="module" src="/api-client.js"></script>
     
     <!-- Application principale (TypeScript + Vite) -->
     <script type="module" src="/src/main.ts"></script>

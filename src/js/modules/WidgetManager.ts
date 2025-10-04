@@ -31,7 +31,7 @@ export class WidgetManager {
         { id: 'calendar-widget', name: 'Calendrier', visible: true, order: 10, size: 'full' },
     ];
 
-    constructor(private dataManager: DataManager) {
+    constructor(_dataManager: DataManager) {
         this.loadLayout();
     }
 
@@ -436,7 +436,7 @@ export class WidgetManager {
         }
     }
 
-    private handleWidgetDragEnd(e: Event): void {
+    private handleWidgetDragEnd(_e: Event): void {
         if (this.draggedWidget) {
             this.draggedWidget.classList.remove('opacity-50');
         }

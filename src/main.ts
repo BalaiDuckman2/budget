@@ -30,7 +30,7 @@ class BudgetManager {
     private dragDropManager: DragDropManager;
     private widgetManager: WidgetManager;
     private calendarManager: CalendarManager;
-    private touchGestureManager: TouchGestureManager;
+    private _touchGestureManager: TouchGestureManager;
     
     // Anti-spam notifications
     private lastAlertKey: string | null = null;
@@ -52,7 +52,7 @@ class BudgetManager {
         this.dragDropManager = new DragDropManager(this.dataManager);
         this.widgetManager = new WidgetManager(this.dataManager);
         this.calendarManager = new CalendarManager(this.dataManager);
-        this.touchGestureManager = new TouchGestureManager();
+        this._touchGestureManager = new TouchGestureManager();
         
         this.init();
     }

@@ -1,6 +1,10 @@
+import { Chart, registerables } from 'chart.js';
 import type { EvolutionData } from '@/types';
 import type { DataManager } from './DataManager';
 import type { ThemeManager } from './ThemeManager';
+
+// Enregistrer tous les composants Chart.js
+Chart.register(...registerables);
 
 // Gestionnaire de graphiques (Chart.js)
 export class ChartManager {
@@ -29,7 +33,7 @@ export class ChartManager {
         const budgetData = Object.values(data.categories).map(cat => cat.budget);
         const spentData = Object.values(data.categories).map(cat => cat.spent);
 
-        this.chart = new (window as any).Chart(context, {
+        this.chart = new Chart(context, {
             type: 'doughnut',
             data: {
                 labels: labels,
@@ -97,7 +101,7 @@ export class ChartManager {
         const textColor = isDark ? '#e5e7eb' : '#374151';
         const gridColor = isDark ? '#374151' : '#e5e7eb';
 
-        this.evolutionChart = new (window as any).Chart(context, {
+        this.evolutionChart = new Chart(context, {
             type: 'line',
             data: {
                 labels: evolutionData.labels,
@@ -163,7 +167,10 @@ export class ChartManager {
                     x: {
                         grid: {
                             color: gridColor,
-                            drawBorder: false
+                            display: true
+                        },
+                        border: {
+                            display: false
                         },
                         ticks: {
                             color: textColor
@@ -173,7 +180,10 @@ export class ChartManager {
                         beginAtZero: true,
                         grid: {
                             color: gridColor,
-                            drawBorder: false
+                            display: true
+                        },
+                        border: {
+                            display: false
                         },
                         ticks: {
                             color: textColor,

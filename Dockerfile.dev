@@ -1,0 +1,22 @@
+# Dockerfile pour le mode développement sur NAS
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copier les fichiers
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+# Créer le dossier data
+RUN mkdir -p /app/data && chmod 777 /app/data
+
+# Exposer les ports (Vite + Backend)
+EXPOSE 3000 5000
+
+# Variables d'environnement
+ENV NODE_ENV=development
+
+# Lancer en mode dev (Vite + Backend en parallèle)
+CMD ["sh", "-c", "npm run server:dev & npm run dev"]

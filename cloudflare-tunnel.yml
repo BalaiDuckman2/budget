@@ -1,0 +1,7 @@
+tunnel: <VOTRE-TUNNEL-ID>
+credentials-file: /root/.cloudflared/<VOTRE-TUNNEL-ID>.json
+
+ingress:
+  - hostname: budget.votre-domaine.com
+    service: http://localhost:3000
+  - service: http_status:404

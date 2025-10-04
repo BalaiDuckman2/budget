@@ -1,0 +1,997 @@
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Gestionnaire de Budget Personnel</title>
+    
+    <meta name="description" content="Gestionnaire de budget personnel avec stockage serveur">
+    <meta name="theme-color" content="#6366f1">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Budget Manager">
+    <link rel="manifest" href="/assets/manifest-DkkLVgcT.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        // Configuration Tailwind avec mode dark
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        'primary-dark': '#4f46e5',
+                        accent: '#06b6d4',
+                        'accent-dark': '#0891b2'
+                    }
+                }
+            }
+        }
+    </script>
+  <script type="module" crossorigin src="/assets/index-DLk6_KXT.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/chart-DUfl3Dpl.js">
+  <link rel="modulepreload" crossorigin href="/assets/jspdf-Bsayurxw.js">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <!-- Indicateur Pull to Refresh -->
+    <div id="pull-refresh-indicator" class="fixed top-0 left-0 right-0 h-16 flex items-center justify-center bg-blue-500 text-white font-semibold z-50 opacity-0 transition-all duration-300" style="transform: translateY(-100%);">
+        <i class="fas fa-sync-alt animate-spin mr-2"></i> Actualiser...
+    </div>
+    
+    <div class="max-w-6xl mx-auto p-5">
+        <header class="flex justify-between items-center bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl mb-8 transition-colors duration-300">
+            <h1 class="text-3xl font-bold text-primary dark:text-blue-400 flex items-center gap-3 transition-colors duration-300">
+                <i class="fas fa-wallet"></i> Mon Budget Personnel
+            </h1>
+            <div class="flex items-center gap-4">
+                <span id="current-month" class="font-semibold text-gray-600 dark:text-gray-300"></span>
+                <!-- Mode Édition -->
+                <button id="edit-mode-btn" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-all duration-300 hover:scale-105 flex items-center gap-2" title="Mode Édition">
+                    <i class="fas fa-edit"></i>
+                    <span class="hidden md:inline">Éditer</span>
+                </button>
+                <!-- Export PDF -->
+                <button id="export-pdf-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all duration-300 hover:scale-105 flex items-center gap-2" title="Exporter en PDF">
+                    <i class="fas fa-file-pdf"></i>
+                    <span class="hidden md:inline">Export PDF</span>
+                </button>
+                <!-- Sélecteur de Couleur -->
+                <button id="color-theme-btn" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 p-3 rounded-full transition-all duration-300 hover:scale-110" title="Changer la couleur">
+                    <i class="fas fa-palette text-gray-600 dark:text-gray-300"></i>
+                </button>
+                <!-- Toggle Mode Sombre -->
+                <button id="theme-toggle" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 p-3 rounded-full transition-all duration-300 hover:scale-110" title="Basculer le mode sombre">
+                    <i class="fas fa-moon text-gray-600 dark:text-gray-300 dark:hidden"></i>
+                    <i class="fas fa-sun text-yellow-500 hidden dark:block"></i>
+                </button>
+                <button id="edit-budget-btn" class="bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-600 dark:text-blue-300 px-4 py-2 rounded-lg transition-all duration-300 hover:scale-105 flex items-center gap-2">
+                    <i class="fas fa-edit"></i>
+                    <span class="hidden sm:inline">Modifier budgets</span>
+                </button>
+                <button id="settings-btn" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 p-3 rounded-full transition-all duration-300 hover:scale-110">
+                    <i class="fas fa-cog text-gray-600 dark:text-gray-300"></i>
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Configuration initiale -->
+            <div id="setup-screen" class="block">
+                <div class="bg-white dark:bg-gray-800 p-10 rounded-2xl shadow-xl max-w-2xl mx-auto transition-colors duration-300">
+                    <h2 class="text-2xl font-bold text-primary dark:text-blue-400 text-center mb-8 flex items-center justify-center gap-3 transition-colors duration-300">
+                        <i class="fas fa-rocket"></i> Configuration Initiale
+                    </h2>
+                    <form id="setup-form">
+                        <div class="mb-6">
+                            <label for="monthly-salary" class="block mb-2 font-semibold text-gray-700 dark:text-gray-300 transition-colors duration-300">Salaire mensuel (€)</label>
+                            <input type="number" id="monthly-salary" required min="0" step="0.01" 
+                                   class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-lg focus:border-primary dark:focus:border-blue-400 focus:outline-none transition-colors duration-300">
+                        </div>
+                        
+                        <h3 class="text-xl font-semibold mb-6 text-gray-800 dark:text-gray-200 transition-colors duration-300">Répartition des catégories (€)</h3>
+                        <div id="categories-setup" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div class="flex items-center gap-3 p-4 bg-gray-100 rounded-lg">
+                                <label class="flex-1 font-semibold">Courses</label>
+                                <input type="number" name="courses" value="400" min="0" step="0.01" 
+                                       class="w-24 p-2 border border-gray-300 rounded text-center">
+                                <span class="text-gray-600">€</span>
+                                <button type="button" class="btn-rest bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded text-sm transition-all hover:scale-105" data-category="courses">Reste ici</button>
+                            </div>
+                            <div class="flex items-center gap-3 p-4 bg-gray-100 rounded-lg">
+                                <label class="flex-1 font-semibold">Loisirs</label>
+                                <input type="number" name="loisirs" value="200" min="0" step="0.01" 
+                                       class="w-24 p-2 border border-gray-300 rounded text-center">
+                                <span class="text-gray-600">€</span>
+                                <button type="button" class="btn-rest bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded text-sm transition-all hover:scale-105" data-category="loisirs">Reste ici</button>
+                            </div>
+                            <div class="flex items-center gap-3 p-4 bg-gray-100 rounded-lg">
+                                <label class="flex-1 font-semibold">Transport</label>
+                                <input type="number" name="transport" value="150" min="0" step="0.01" 
+                                       class="w-24 p-2 border border-gray-300 rounded text-center">
+                                <span class="text-gray-600">€</span>
+                                <button type="button" class="btn-rest bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded text-sm transition-all hover:scale-105" data-category="transport">Reste ici</button>
+                            </div>
+                            <div class="flex items-center gap-3 p-4 bg-gray-100 rounded-lg">
+                                <label class="flex-1 font-semibold">Logement</label>
+                                <input type="number" name="logement" value="800" min="0" step="0.01" 
+                                       class="w-24 p-2 border border-gray-300 rounded text-center">
+                                <span class="text-gray-600">€</span>
+                                <button type="button" class="btn-rest bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded text-sm transition-all hover:scale-105" data-category="logement">Reste ici</button>
+                            </div>
+                            <div class="flex items-center gap-3 p-4 bg-gray-100 rounded-lg">
+                                <label class="flex-1 font-semibold">Épargne</label>
+                                <input type="number" name="epargne" value="300" min="0" step="0.01" 
+                                       class="w-24 p-2 border border-gray-300 rounded text-center">
+                                <span class="text-gray-600">€</span>
+                                <button type="button" class="btn-rest bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded text-sm transition-all hover:scale-105" data-category="epargne">Reste ici</button>
+                            </div>
+                            <div class="flex items-center gap-3 p-4 bg-gray-100 rounded-lg">
+                                <label class="flex-1 font-semibold">Charges fixes</label>
+                                <input type="number" name="charges_fixes" value="250" min="0" step="0.01" 
+                                       class="w-24 p-2 border border-gray-300 rounded text-center">
+                                <span class="text-gray-600">€</span>
+                                <button type="button" class="btn-rest bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded text-sm transition-all hover:scale-105" data-category="charges_fixes">Reste ici</button>
+                            </div>
+                            <div class="flex items-center gap-3 p-4 bg-gray-100 rounded-lg">
+                                <label class="flex-1 font-semibold">Divers</label>
+                                <input type="number" name="divers" value="100" min="0" step="0.01" 
+                                       class="w-24 p-2 border border-gray-300 rounded text-center">
+                                <span class="text-gray-600">€</span>
+                                <button type="button" class="btn-rest bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded text-sm transition-all hover:scale-105" data-category="divers">Reste ici</button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-8 p-5 bg-gray-100 rounded-lg">
+                            <div class="flex justify-between items-center text-lg font-semibold">
+                                <span>Total alloué: <span id="total-allocated" class="text-primary">2200</span>€</span>
+                                <span class="remaining-budget text-primary">Reste: <span id="remaining-budget">0</span>€</span>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 hover:-translate-y-1 flex items-center justify-center gap-2">
+                            <i class="fas fa-check"></i> Commencer
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Dashboard principal -->
+            <div id="dashboard-screen" class="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Résumé mensuel -->
+                    <div data-widget-id="summary" class="lg:col-span-3 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
+                        <h3 class="text-xl font-semibold text-primary mb-5 flex items-center gap-2">
+                            <i class="fas fa-chart-line"></i> Résumé du mois
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="text-center p-6 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl">
+                                <span class="block text-sm text-blue-600 mb-2 font-medium">Salaire</span>
+                                <span class="block text-2xl font-bold text-blue-700" id="salary-display">0€</span>
+                            </div>
+                            <div class="text-center p-6 bg-gradient-to-r from-red-50 to-red-100 rounded-xl">
+                                <span class="block text-sm text-red-600 mb-2 font-medium">Dépensé</span>
+                                <span class="block text-2xl font-bold text-red-700" id="spent-display">0€</span>
+                            </div>
+                            <div class="text-center p-6 bg-gradient-to-r from-green-50 to-green-100 rounded-xl">
+                                <span class="block text-sm text-green-600 mb-2 font-medium">Restant</span>
+                                <span class="block text-2xl font-bold text-green-700" id="remaining-display">0€</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dernières transactions -->
+                    <div data-widget-id="transactions" class="lg:col-span-3 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-center mb-5">
+                            <h3 class="text-xl font-semibold text-primary flex items-center gap-2">
+                                <i class="fas fa-history"></i> Dernières transactions
+                            </h3>
+                            <button id="show-all-transactions-btn" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg transition-all duration-300 flex items-center gap-2">
+                                <i class="fas fa-list"></i>
+                                <span class="hidden sm:inline">Voir toutes</span>
+                            </button>
+                        </div>
+                        <div id="recent-transactions" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+                    </div>
+
+                    <!-- Graphique de répartition -->
+                    <div data-widget-id="chart" class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <h3 class="text-xl font-semibold text-primary dark:text-blue-400 mb-5 flex items-center gap-2 transition-colors duration-300">
+                            <i class="fas fa-chart-pie"></i> Répartition Budget
+                        </h3>
+                        <div class="h-80">
+                            <canvas id="budget-chart"></canvas>
+                        </div>
+                    </div>
+
+                    
+
+                    
+
+                    <!-- Comparaison Mensuelle -->
+                    <div data-widget-id="comparison" class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <h3 class="text-xl font-semibold text-primary dark:text-blue-400 mb-5 flex items-center gap-2 transition-colors duration-300">
+                            <i class="fas fa-chart-line"></i> Comparaison Mensuelle
+                        </h3>
+                        <div id="monthly-comparison" class="space-y-4">
+                            <div class="text-center text-gray-500 dark:text-gray-400 py-4">
+                                <i class="fas fa-calendar-alt text-3xl mb-2"></i>
+                                <p class="text-sm">Pas assez de données</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prédictions Budgétaires -->
+                    <div data-widget-id="predictions" class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <h3 class="text-xl font-semibold text-primary dark:text-blue-400 mb-5 flex items-center gap-2 transition-colors duration-300">
+                            <i class="fas fa-crystal-ball"></i> Prédictions
+                        </h3>
+                        <div id="budget-predictions" class="space-y-4">
+                            <div class="text-center text-gray-500 dark:text-gray-400 py-4">
+                                <i class="fas fa-chart-area text-3xl mb-2"></i>
+                                <p class="text-sm">Pas assez de données</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top 5 des dépenses -->
+                    <div data-widget-id="top-expenses" class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <h3 class="text-xl font-semibold text-primary dark:text-blue-400 mb-5 flex items-center gap-2 transition-colors duration-300">
+                            <i class="fas fa-trophy"></i> Top 5 des Dépenses
+                        </h3>
+                        <div id="top-expenses" class="space-y-3">
+                            <div class="text-center text-gray-500 dark:text-gray-400 py-4">
+                                <i class="fas fa-chart-bar text-3xl mb-2"></i>
+                                <p class="text-sm">Aucune dépense ce mois</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistiques Avancées -->
+                    <div data-widget-id="stats" class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <h3 class="text-xl font-semibold text-primary dark:text-blue-400 mb-5 flex items-center gap-2 transition-colors duration-300">
+                            <i class="fas fa-calculator"></i> Statistiques Avancées
+                        </h3>
+                        <div id="advanced-stats" class="space-y-3">
+                            <div class="text-center text-gray-500 dark:text-gray-400 py-4">
+                                <i class="fas fa-chart-pie text-3xl mb-2"></i>
+                                <p class="text-sm">Pas assez de données</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transactions Récurrentes -->
+                    <div data-widget-id="recurring" class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <div class="flex justify-between items-center mb-5">
+                            <h3 class="text-xl font-semibold text-primary dark:text-blue-400 flex items-center gap-2 transition-colors duration-300">
+                                <i class="fas fa-sync-alt"></i> Transactions Récurrentes
+                            </h3>
+                            <button id="add-recurring-btn" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg transition-all duration-300 flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Nouvelle
+                            </button>
+                        </div>
+                        <div id="recurring-transactions" class="space-y-3">
+                            <div class="text-center text-gray-500 dark:text-gray-400 py-4">
+                                <i class="fas fa-calendar-check text-3xl mb-2"></i>
+                                <p class="text-sm">Aucune transaction récurrente</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ajout rapide de dépense -->
+                    <div data-widget-id="quick-expense" class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg transition-colors duration-300">
+                        <h3 class="text-xl font-semibold text-primary dark:text-blue-400 mb-5 flex items-center gap-2 transition-colors duration-300">
+                            <i class="fas fa-plus-circle"></i> Ajouter une dépense
+                        </h3>
+                        <form id="expense-form" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <select id="expense-category" required class="p-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none">
+                                    <option value="">Choisir une catégorie</option>
+                                </select>
+                                <input type="number" id="expense-amount" placeholder="Montant (€)" required min="0" step="0.01" 
+                                       class="p-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none">
+                            </div>
+                            <input type="text" id="expense-description" placeholder="Description (optionnel)" 
+                                   class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none">
+                            <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
+                                <i class="fas fa-plus"></i> Ajouter
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Catégories de budget -->
+                    <div data-widget-id="categories" class="lg:col-span-3 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
+                        <h3 class="text-xl font-semibold text-primary mb-6 flex items-center gap-2">
+                            <i class="fas fa-list"></i> Mes Catégories
+                        </h3>
+                        <div id="categories-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+                    </div>
+
+                    <!-- Widget Calendrier -->
+                    <div data-widget-id="calendar-widget" class="lg:col-span-3 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-primary dark:text-blue-400 flex items-center gap-2">
+                                <i class="fas fa-calendar-alt"></i> Calendrier des Transactions
+                            </h3>
+                            <div class="flex gap-2">
+                                <button class="widget-collapse-toggle bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 p-2 rounded-lg transition-colors" data-widget="calendar-widget" title="Plier/Déplier">
+                                    <i class="fas fa-chevron-up"></i>
+                                </button>
+                                <button id="widget-prev-month-btn" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 p-2 rounded-lg transition-colors">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <button id="widget-next-month-btn" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 p-2 rounded-lg transition-colors">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="widget-content">
+                            <!-- Titre du mois -->
+                            <h4 id="widget-calendar-month-title" class="text-lg font-bold text-gray-800 dark:text-gray-200 text-center mb-4"></h4>
+
+                            <!-- Projection mensuelle -->
+                            <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Dépenses prévues ce mois :</p>
+                                <p id="widget-monthly-projection" class="text-xl font-bold text-blue-600 dark:text-blue-400">0€</p>
+                            </div>
+
+                            <!-- Jours de la semaine -->
+                            <div class="grid grid-cols-7 gap-1 mb-2">
+                                <div class="text-center text-xs font-semibold text-gray-600 dark:text-gray-400">L</div>
+                                <div class="text-center text-xs font-semibold text-gray-600 dark:text-gray-400">M</div>
+                                <div class="text-center text-xs font-semibold text-gray-600 dark:text-gray-400">M</div>
+                                <div class="text-center text-xs font-semibold text-gray-600 dark:text-gray-400">J</div>
+                                <div class="text-center text-xs font-semibold text-gray-600 dark:text-gray-400">V</div>
+                                <div class="text-center text-xs font-semibold text-gray-600 dark:text-gray-400">S</div>
+                                <div class="text-center text-xs font-semibold text-gray-600 dark:text-gray-400">D</div>
+                            </div>
+
+                            <!-- Grille du calendrier -->
+                            <div id="widget-calendar-grid" class="grid grid-cols-7 gap-1 mb-4">
+                                <!-- Généré dynamiquement -->
+                            </div>
+
+                            <!-- Légende -->
+                            <div class="flex flex-wrap gap-3 text-xs">
+                                <div class="flex items-center gap-1">
+                                    <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                    <span class="text-gray-600 dark:text-gray-400">Transaction</span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <div class="w-3 h-3 bg-orange-500 rounded-full"></div>
+                                    <span class="text-gray-600 dark:text-gray-400">Récurrente</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    
+                </div>
+            </div>
+
+            <!-- Modal d'édition des budgets -->
+            <div id="edit-budget-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                    <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                        <h3 class="text-xl font-semibold text-primary flex items-center gap-2">
+                            <i class="fas fa-edit"></i> Modifier les Budgets
+                        </h3>
+                        <button class="close-edit-modal text-2xl text-gray-600 hover:text-gray-800 transition-colors">&times;</button>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-4 p-4 bg-blue-50 rounded-lg">
+                            <p class="text-blue-700 text-sm">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                Ajustez vos budgets selon vos besoins du mois. Les dépenses déjà effectuées sont conservées.
+                            </p>
+                        </div>
+                        
+                        <form id="edit-budget-form">
+                            <div class="mb-6">
+                                <label for="edit-salary" class="block mb-2 font-semibold text-gray-700">Salaire mensuel (€)</label>
+                                <input type="number" id="edit-salary" min="0" step="0.01" 
+                                       class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none">
+                            </div>
+                            
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-lg font-semibold">Budgets par catégorie</h4>
+                                <button type="button" id="add-category-btn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all duration-300 flex items-center gap-2">
+                                    <i class="fas fa-plus"></i> Nouvelle catégorie
+                                </button>
+                            </div>
+                            <div id="edit-categories-list" class="space-y-4 mb-6"></div>
+                            
+                            <div class="mb-6 p-4 bg-gray-100 rounded-lg">
+                                <div class="flex justify-between items-center text-lg font-semibold">
+                                    <span>Total alloué: <span id="edit-total-allocated" class="text-primary">0</span>€</span>
+                                    <span class="edit-remaining-budget text-primary">Reste: <span id="edit-remaining-budget">0</span>€</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-3">
+                                <button type="button" class="close-edit-modal flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300">
+                                    Annuler
+                                </button>
+                                <button type="submit" class="flex-1 bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300">
+                                    <i class="fas fa-save mr-2"></i>Sauvegarder
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal d'édition de transaction -->
+            <div id="edit-transaction-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4">
+                    <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                        <h3 class="text-xl font-semibold text-primary flex items-center gap-2">
+                            <i class="fas fa-edit"></i> Modifier la Transaction
+                        </h3>
+                        <button class="close-edit-transaction-modal text-2xl text-gray-600 hover:text-gray-800 transition-colors">&times;</button>
+                    </div>
+                    <div class="p-6">
+                        <form id="edit-transaction-form" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Catégorie</label>
+                                <select id="edit-transaction-category" required class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none">
+                                    <option value="">Choisir une catégorie</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Montant (€)</label>
+                                <input type="number" id="edit-transaction-amount" required min="0" step="0.01" 
+                                       class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                <input type="text" id="edit-transaction-description" 
+                                       class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none">
+                            </div>
+                            <div class="flex gap-3 pt-4">
+                                <button type="button" class="close-edit-transaction-modal flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300">
+                                    Annuler
+                                </button>
+                                <button type="submit" class="flex-1 bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300">
+                                    <i class="fas fa-save mr-2"></i>Sauvegarder
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal des transactions -->
+            <div id="all-transactions-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                    <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                        <h3 class="text-xl font-semibold text-primary flex items-center gap-2">
+                            <i class="fas fa-list"></i> <span id="transactions-modal-title">Toutes les Transactions</span>
+                        </h3>
+                        <button class="close-all-transactions-modal text-2xl text-gray-600 hover:text-gray-800 transition-colors">&times;</button>
+                    </div>
+                    <div class="p-6">
+                        <!-- Barre de recherche -->
+                        <div class="mb-4">
+                            <div class="relative">
+                                <input type="text" id="transaction-search" placeholder="Rechercher dans les transactions..." 
+                                       class="w-full p-3 pl-10 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:border-primary dark:focus:border-blue-400 focus:outline-none transition-colors duration-300">
+                                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+                                <button id="clear-search" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hidden">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4 flex flex-wrap gap-2">
+                            <button class="filter-btn active bg-primary text-white px-3 py-1 rounded-full text-sm transition-all duration-300 transform hover:scale-105 shadow-lg ring-2 ring-primary ring-opacity-50" data-category="all">
+                                Toutes
+                            </button>
+                            <div id="category-filters" class="flex flex-wrap gap-2"></div>
+                        </div>
+                        
+                        <!-- Statistiques de la catégorie sélectionnée -->
+                        <div id="category-stats" class="mb-4 p-4 bg-blue-50 rounded-lg hidden">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center mb-4">
+                                <div>
+                                    <div class="text-sm text-blue-600 mb-1">Budget Total</div>
+                                    <div class="text-lg font-bold text-blue-700" id="stats-budget">0€</div>
+                                </div>
+                                <div>
+                                    <div class="text-sm text-red-600 mb-1">Total Dépensé</div>
+                                    <div class="text-lg font-bold text-red-700" id="stats-spent">0€</div>
+                                </div>
+                                <div>
+                                    <div class="text-sm text-green-600 mb-1">Restant</div>
+                                    <div class="text-lg font-bold text-green-700" id="stats-remaining">0€</div>
+                                </div>
+                            </div>
+                            <!-- Barre de progression pour la catégorie -->
+                            <div class="w-full bg-gray-300 rounded-full h-4 overflow-hidden shadow-inner">
+                                <div id="stats-progress-bar" class="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-700 ease-out relative shadow-sm" style="width: 0%">
+                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-600 mt-1">
+                                <span>0%</span>
+                                <span id="stats-percentage">0% utilisé</span>
+                                <span>100%</span>
+                            </div>
+                        </div>
+
+                        <!-- Statistiques globales (mode "Toutes") -->
+                        <div id="global-stats" class="mb-4 p-4 bg-gray-50 rounded-lg hidden">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center mb-4">
+                                <div>
+                                    <div class="text-sm text-gray-600 mb-1">Budget Total</div>
+                                    <div class="text-lg font-bold text-gray-800" id="global-budget">0€</div>
+                                </div>
+                                <div>
+                                    <div class="text-sm text-red-600 mb-1">Total Dépensé</div>
+                                    <div class="text-lg font-bold text-red-700" id="global-spent">0€</div>
+                                </div>
+                                <div>
+                                    <div class="text-sm text-green-600 mb-1">Restant</div>
+                                    <div class="text-lg font-bold text-green-700" id="global-remaining">0€</div>
+                                </div>
+                            </div>
+                            <!-- Barre de progression globale -->
+                            <div class="w-full bg-gray-300 rounded-full h-4 overflow-hidden shadow-inner">
+                                <div id="global-progress-bar" class="h-full transition-all duration-700 ease-out relative shadow-sm" style="width: 0%">
+                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-600 mt-1">
+                                <span>0%</span>
+                                <span id="global-percentage">0% utilisé</span>
+                                <span>100%</span>
+                            </div>
+                        </div>
+                        
+                        <div id="all-transactions-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                        
+                        <div id="no-transactions" class="text-center py-8 text-gray-500 hidden">
+                            <i class="fas fa-inbox text-4xl mb-4"></i>
+                            <p>Aucune transaction trouvée</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de gestion des widgets -->
+            <div id="widgets-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+                    <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="text-xl font-semibold text-primary dark:text-blue-400 flex items-center gap-2">
+                            <i class="fas fa-th-large"></i> Gérer les Widgets
+                        </h3>
+                        <button class="close-widgets-modal text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            Cliquez sur l'icône <i class="fas fa-eye-slash text-red-500"></i> pour masquer un widget ou <i class="fas fa-eye text-green-500"></i> pour l'afficher.
+                        </p>
+                        <div id="widgets-list" class="space-y-3">
+                            <!-- Liste des widgets générée dynamiquement -->
+                        </div>
+                        <div class="mt-6 flex gap-3">
+                            <button id="reset-layout-btn" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300">
+                                <i class="fas fa-undo"></i> Réinitialiser
+                            </button>
+                            <button class="close-widgets-modal flex-1 bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300">
+                                <i class="fas fa-check"></i> Fermer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Calendrier -->
+            <div id="calendar-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="text-xl font-semibold text-primary dark:text-blue-400 flex items-center gap-2">
+                            <i class="fas fa-calendar-alt"></i> Calendrier des Transactions
+                        </h3>
+                        <button class="close-calendar-modal text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <!-- Navigation mois -->
+                        <div class="flex justify-between items-center mb-6">
+                            <button id="prev-month-btn" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 p-2 rounded-lg transition-colors">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <h4 id="calendar-month-title" class="text-xl font-bold text-gray-800 dark:text-gray-200"></h4>
+                            <button id="next-month-btn" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 p-2 rounded-lg transition-colors">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+
+                        <!-- Projection mensuelle -->
+                        <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Dépenses prévues ce mois :</p>
+                            <p id="monthly-projection" class="text-2xl font-bold text-blue-600 dark:text-blue-400">0€</p>
+                        </div>
+
+                        <!-- Jours de la semaine -->
+                        <div class="grid grid-cols-7 gap-2 mb-2">
+                            <div class="text-center text-sm font-semibold text-gray-600 dark:text-gray-400">Lun</div>
+                            <div class="text-center text-sm font-semibold text-gray-600 dark:text-gray-400">Mar</div>
+                            <div class="text-center text-sm font-semibold text-gray-600 dark:text-gray-400">Mer</div>
+                            <div class="text-center text-sm font-semibold text-gray-600 dark:text-gray-400">Jeu</div>
+                            <div class="text-center text-sm font-semibold text-gray-600 dark:text-gray-400">Ven</div>
+                            <div class="text-center text-sm font-semibold text-gray-600 dark:text-gray-400">Sam</div>
+                            <div class="text-center text-sm font-semibold text-gray-600 dark:text-gray-400">Dim</div>
+                        </div>
+
+                        <!-- Grille du calendrier -->
+                        <div id="calendar-grid" class="grid grid-cols-7 gap-2">
+                            <!-- Généré dynamiquement -->
+                        </div>
+
+                        <!-- Légende -->
+                        <div class="mt-6 flex flex-wrap gap-4 text-sm">
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 bg-blue-500 rounded"></div>
+                                <span class="text-gray-600 dark:text-gray-400">Transaction effectuée</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 bg-orange-500 rounded"></div>
+                                <span class="text-gray-600 dark:text-gray-400">Transaction récurrente prévue</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de sélection de thème coloré -->
+            <div id="color-theme-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4">
+                    <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="text-xl font-semibold text-primary dark:text-blue-400 flex items-center gap-2">
+                            <i class="fas fa-palette"></i> Choisir un Thème
+                        </h3>
+                        <button class="close-color-theme-modal text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            Personnalisez l'apparence de votre application
+                        </p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button class="color-theme-option p-4 rounded-lg border-2 border-transparent hover:border-blue-500 transition-all" data-theme="blue">
+                                <div class="w-full h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg mb-2"></div>
+                                <p class="text-center font-semibold text-gray-800 dark:text-gray-200">Bleu</p>
+                            </button>
+                            <button class="color-theme-option p-4 rounded-lg border-2 border-transparent hover:border-green-500 transition-all" data-theme="green">
+                                <div class="w-full h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-lg mb-2"></div>
+                                <p class="text-center font-semibold text-gray-800 dark:text-gray-200">Vert</p>
+                            </button>
+                            <button class="color-theme-option p-4 rounded-lg border-2 border-transparent hover:border-red-500 transition-all" data-theme="red">
+                                <div class="w-full h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-lg mb-2"></div>
+                                <p class="text-center font-semibold text-gray-800 dark:text-gray-200">Rouge</p>
+                            </button>
+                            <button class="color-theme-option p-4 rounded-lg border-2 border-transparent hover:border-purple-500 transition-all" data-theme="purple">
+                                <div class="w-full h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg mb-2"></div>
+                                <p class="text-center font-semibold text-gray-800 dark:text-gray-200">Violet</p>
+                            </button>
+                            <button class="color-theme-option p-4 rounded-lg border-2 border-transparent hover:border-orange-500 transition-all" data-theme="orange">
+                                <div class="w-full h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg mb-2"></div>
+                                <p class="text-center font-semibold text-gray-800 dark:text-gray-200">Orange</p>
+                            </button>
+                            <button class="color-theme-option p-4 rounded-lg border-2 border-transparent hover:border-pink-500 transition-all" data-theme="pink">
+                                <div class="w-full h-12 bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg mb-2"></div>
+                                <p class="text-center font-semibold text-gray-800 dark:text-gray-200">Rose</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de paramètres -->
+            <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+                    <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                        <h3 class="text-xl font-semibold text-primary flex items-center gap-2">
+                            <i class="fas fa-cog"></i> Paramètres
+                        </h3>
+                        <button class="close-modal text-2xl text-gray-600 hover:text-gray-800 transition-colors">&times;</button>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border-l-4 border-blue-500">
+                                <h4 class="font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
+                                    <i class="fas fa-server"></i> Stockage Serveur
+                                </h4>
+                                <p class="text-blue-600 dark:text-blue-400 text-sm mb-3">
+                                    ✅ Vos données sont automatiquement sauvegardées sur votre NAS
+                                </p>
+                                <div class="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                        <span>Sauvegarde automatique</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                        <span>Accessible depuis tous vos appareils</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                        <span>Backup automatique</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button id="load-template-btn" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
+                                <i class="fas fa-magic"></i> Charger un template
+                            </button>
+                            
+                            <button id="export-data-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
+                                <i class="fas fa-download"></i> Exporter les données
+                            </button>
+                            <button id="import-data-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
+                                <i class="fas fa-upload"></i> Importer les données
+                            </button>
+                            <input type="file" id="import-file" accept=".json" class="hidden">
+                            <button id="reset-month-btn" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
+                                <i class="fas fa-calendar-alt"></i> Réinitialiser le mois
+                            </button>
+                            <button id="reset-all-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
+                                <i class="fas fa-trash"></i> Tout réinitialiser
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            
+        </main>
+    </div>
+
+    <!-- Modal Nouvelle Catégorie -->
+    <div id="new-category-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 transition-colors duration-300">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-xl font-semibold text-primary dark:text-blue-400 flex items-center gap-2">
+                    <i class="fas fa-plus-circle"></i> Nouvelle Catégorie
+                </h3>
+                <button class="close-new-category-modal text-2xl text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">&times;</button>
+            </div>
+            <form id="new-category-form" class="p-6 space-y-4">
+                <div>
+                    <label for="new-category-name" class="block mb-2 font-semibold text-gray-700 dark:text-gray-300">Nom de la catégorie</label>
+                    <input type="text" id="new-category-name" required
+                           class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:border-primary focus:outline-none dark:bg-gray-700 dark:text-gray-200"
+                           placeholder="Ex: Restaurants, Santé, Éducation...">
+                </div>
+                
+                <div>
+                    <label for="new-category-budget" class="block mb-2 font-semibold text-gray-700 dark:text-gray-300">Budget (€)</label>
+                    <input type="number" id="new-category-budget" min="0" step="0.01" required
+                           class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:border-primary focus:outline-none dark:bg-gray-700 dark:text-gray-200"
+                           placeholder="0.00">
+                </div>
+                
+                <div>
+                    <label for="new-category-color" class="block mb-2 font-semibold text-gray-700 dark:text-gray-300">Couleur</label>
+                    <div class="flex gap-2 items-center">
+                        <input type="color" id="new-category-color" value="#6366f1"
+                               class="w-16 h-12 border-2 border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer">
+                        <div class="flex-1 grid grid-cols-6 gap-2">
+                            <button type="button" class="color-preset w-10 h-10 rounded-lg border-2 border-gray-300 hover:scale-110 transition-transform" style="background-color: #3b82f6" data-color="#3b82f6"></button>
+                            <button type="button" class="color-preset w-10 h-10 rounded-lg border-2 border-gray-300 hover:scale-110 transition-transform" style="background-color: #10b981" data-color="#10b981"></button>
+                            <button type="button" class="color-preset w-10 h-10 rounded-lg border-2 border-gray-300 hover:scale-110 transition-transform" style="background-color: #f59e0b" data-color="#f59e0b"></button>
+                            <button type="button" class="color-preset w-10 h-10 rounded-lg border-2 border-gray-300 hover:scale-110 transition-transform" style="background-color: #8b5cf6" data-color="#8b5cf6"></button>
+                            <button type="button" class="color-preset w-10 h-10 rounded-lg border-2 border-gray-300 hover:scale-110 transition-transform" style="background-color: #ef4444" data-color="#ef4444"></button>
+                            <button type="button" class="color-preset w-10 h-10 rounded-lg border-2 border-gray-300 hover:scale-110 transition-transform" style="background-color: #ec4899" data-color="#ec4899"></button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 pt-4">
+                    <button type="button" class="close-new-category-modal flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 rounded-lg transition-all duration-300">
+                        Annuler
+                    </button>
+                    <button type="submit" class="flex-1 bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-lg transition-all duration-300">
+                        <i class="fas fa-plus mr-2"></i>Créer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Templates de Budget -->
+    <div id="template-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto transition-colors duration-300">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-xl font-semibold text-primary dark:text-blue-400 flex items-center gap-2">
+                    <i class="fas fa-magic"></i> Choisir un Template
+                </h3>
+                <button class="close-template-modal text-2xl text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">&times;</button>
+            </div>
+            <div class="p-6">
+                <p class="text-gray-600 dark:text-gray-400 mb-6">Sélectionnez un template prédéfini pour démarrer rapidement. Vous pourrez le personnaliser ensuite.</p>
+                <div id="templates-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Templates seront ajoutés ici dynamiquement -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Transaction Récurrente -->
+    <div id="recurring-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 transition-colors duration-300">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-xl font-semibold text-primary dark:text-blue-400 flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> Transaction Récurrente
+                </h3>
+                <button class="close-recurring-modal text-2xl text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">&times;</button>
+            </div>
+            <form id="recurring-form" class="p-6 space-y-4">
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700 dark:text-gray-300">Nom</label>
+                    <input type="text" id="recurring-name" required placeholder="Ex: Netflix, Loyer, Salaire" 
+                           class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:border-primary dark:focus:border-blue-400 focus:outline-none transition-colors duration-300">
+                </div>
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700 dark:text-gray-300">Catégorie</label>
+                    <select id="recurring-category" required class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:border-primary dark:focus:border-blue-400 focus:outline-none transition-colors duration-300">
+                        <option value="">Choisir une catégorie</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700 dark:text-gray-300">Montant (€)</label>
+                    <input type="number" id="recurring-amount" required min="0.01" step="0.01" placeholder="0.00" 
+                           class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:border-primary dark:focus:border-blue-400 focus:outline-none transition-colors duration-300">
+                </div>
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700 dark:text-gray-300">Fréquence</label>
+                    <select id="recurring-frequency" required class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:border-primary dark:focus:border-blue-400 focus:outline-none transition-colors duration-300">
+                        <option value="monthly">Mensuelle</option>
+                        <option value="weekly">Hebdomadaire</option>
+                        <option value="yearly">Annuelle</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700 dark:text-gray-300">Jour du mois (1-31)</label>
+                    <input type="number" id="recurring-day" required min="1" max="31" value="1" 
+                           class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:border-primary dark:focus:border-blue-400 focus:outline-none transition-colors duration-300">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Pour mensuelle/annuelle uniquement</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="recurring-active" checked class="w-4 h-4">
+                    <label for="recurring-active" class="text-gray-700 dark:text-gray-300">Active</label>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" class="close-recurring-modal flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg transition-all duration-300">
+                        Annuler
+                    </button>
+                    <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg transition-all duration-300">
+                        Créer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bouton flottant Ajouter dépense -->
+    <button id="fab-add-expense" class="fixed bottom-6 right-6 z-40 bg-primary hover:bg-primary-dark text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-2xl transition-transform duration-300 hover:scale-110">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Modal Ajout rapide de dépense -->
+    <div id="quick-expense-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-xl font-semibold text-primary dark:text-blue-400 flex items-center gap-2">
+                    <i class="fas fa-plus-circle"></i> Nouvelle dépense
+                </h3>
+                <button class="close-quick-expense text-2xl text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">&times;</button>
+            </div>
+            <form id="quick-expense-form" class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <select id="quick-expense-category" required class="p-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:border-primary dark:focus:border-blue-400 focus:outline-none">
+                        <option value="">Choisir une catégorie</option>
+                    </select>
+                    <input type="number" id="quick-expense-amount" placeholder="Montant (€)" required min="0" step="0.01" 
+                           class="p-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:border-primary dark:focus:border-blue-400 focus:outline-none">
+                </div>
+                <input type="text" id="quick-expense-description" placeholder="Description (optionnel)" 
+                       class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:border-primary dark:focus:border-blue-400 focus:outline-none">
+                <div class="flex gap-3 pt-2">
+                    <button type="button" class="close-quick-expense flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 rounded-lg transition-all duration-300">Annuler</button>
+                    <button type="submit" class="flex-1 bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-lg transition-all duration-300">
+                        <i class="fas fa-plus mr-2"></i>Ajouter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- API Client pour communication serveur -->
+    
+    <!-- Application principale (TypeScript + Vite) -->
+    
+    <!-- Service Worker Registration -->
+    <script>
+        // Désactiver complètement le Service Worker (pour éviter les problèmes de cache)
+        if ('serviceWorker' in navigator) {
+            // Désenregistrer tous les service workers existants
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                    console.log('🧹 Service Worker désenregistré');
+                }
+            });
+        }
+        
+        // Service Worker désactivé - Décommentez pour activer en production
+        /*
+        if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker enregistré:', registration.scope);
+                        
+                        // Vérifier les mises à jour
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Nouvelle version disponible
+                                    if (confirm('Une nouvelle version est disponible ! Recharger ?')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.log('❌ Erreur Service Worker:', error);
+                    });
+            });
+            
+            // Recharger quand un nouveau Service Worker prend le contrôle
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
+        }
+        */
+        
+        // Détecter l'installation de la PWA (désactivé avec le Service Worker)
+        /*
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Afficher un bouton d'installation personnalisé (optionnel)
+            console.log('💡 PWA installable !');
+        });
+        
+        // Détecter quand l'app est installée
+        window.addEventListener('appinstalled', () => {
+            console.log('🎉 PWA installée avec succès !');
+            deferredPrompt = null;
+        });
+        */
+    </script>
+</body>
+</html>
