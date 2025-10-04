@@ -32,7 +32,7 @@
 - [x] **Factures mensuelles** → Électricité, internet ✅ *Implémenté le 02/10/2025*
 - [x] **Salaire automatique** → Ajout automatique chaque mois ✅ *Implémenté le 02/10/2025*
 - [x] **Prélèvements** → Gestion des virements automatiques ✅ *Implémenté le 02/10/2025*
-- [ ] **Calendrier** → Planification des transactions futures
+- [x] **Calendrier** → Planification des transactions futures ✅ *Implémenté le 04/10/2025*
 
 ### 💳 Comptes Multiples
 - [ ] **Compte courant** vs **Compte épargne**
@@ -53,10 +53,10 @@
 - [ ] **Animations** → Transitions fluides
 
 ### 🎭 Personnalisation
-- [ ] **Thèmes colorés** → Bleu, vert, rouge, etc.
+- [x] **Thèmes colorés** → Bleu, vert, rouge, etc. ✅ *Implémenté le 04/10/2025*
 - [ ] **Icônes personnalisées** → Pour chaque catégorie
-- [ ] **Widgets** → Mini-graphiques sur le dashboard
-- [ ] **Layouts** → Disposition personnalisable
+- [x] **Widgets** → Mini-graphiques sur le dashboard ✅ *Implémenté le 04/10/2025*
+- [x] **Layouts** → Disposition personnalisable ✅ *Implémenté le 04/10/2025*
 
 
 ## 📱 Fonctionnalités Mobiles

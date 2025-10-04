@@ -11,6 +11,7 @@ import { RecurringManager } from './js/modules/RecurringManager';
 import { ExportManager } from './js/modules/ExportManager';
 import { DragDropManager } from './js/modules/DragDropManager';
 import { WidgetManager } from './js/modules/WidgetManager';
+import { CalendarManager } from './js/modules/CalendarManager';
 import type { BudgetTemplate } from './types';
 
 // Gestionnaire de Budget Principal - Orchestrateur
@@ -27,6 +28,7 @@ class BudgetManager {
     private notificationManager: NotificationManager;
     private dragDropManager: DragDropManager;
     private widgetManager: WidgetManager;
+    private calendarManager: CalendarManager;
     
     // Anti-spam notifications
     private lastAlertKey: string | null = null;
@@ -47,6 +49,7 @@ class BudgetManager {
         this.notificationManager = new NotificationManager(this.dataManager, this.uiManager);
         this.dragDropManager = new DragDropManager(this.dataManager);
         this.widgetManager = new WidgetManager(this.dataManager);
+        this.calendarManager = new CalendarManager(this.dataManager);
         
         this.init();
     }
@@ -150,6 +153,7 @@ class BudgetManager {
         this.updateSavingsGoals();
         this.updateRecurringTransactions();
         this.updateTopExpenses();
+        this.renderWidgetCalendar();
     }
 
     // Configuration initiale
@@ -326,6 +330,36 @@ class BudgetManager {
             this.toggleTheme();
         });
 
+        // Ouvrir le modal de sélection de couleur
+        document.getElementById('color-theme-btn')!.addEventListener('click', () => {
+            this.openColorThemeModal();
+        });
+
+        // Fermer le modal de couleur
+        document.querySelector('.close-color-theme-modal')!.addEventListener('click', () => {
+            this.closeColorThemeModal();
+        });
+
+        // Sélection d'un thème de couleur
+        document.querySelectorAll('.color-theme-option').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const theme = target.dataset.theme;
+                if (theme && ['blue', 'green', 'red', 'purple', 'orange', 'pink'].includes(theme)) {
+                    this.themeManager.setColorTheme(theme as any);
+                    const themes = this.themeManager.getAvailableThemes();
+                    const themeName = themes[theme as keyof typeof themes]?.name || theme;
+                    this.uiManager.showNotification(`🎨 Thème ${themeName} appliqué`, 'success');
+                    this.closeColorThemeModal();
+                    
+                    // Rafraîchir les graphiques avec les nouvelles couleurs
+                    if (this.chartManager) {
+                        this.chartManager.updateChart();
+                    }
+                }
+            });
+        });
+
         // Mode Édition
         document.getElementById('edit-mode-btn')!.addEventListener('click', () => {
             const isEditMode = this.widgetManager.toggleEditMode();
@@ -353,6 +387,30 @@ class BudgetManager {
 
         document.getElementById('reset-layout-btn')!.addEventListener('click', () => {
             this.widgetManager.resetLayout();
+        });
+
+        // Widget Calendrier - Navigation
+        document.getElementById('widget-prev-month-btn')!.addEventListener('click', () => {
+            this.calendarManager.prevMonth();
+            this.renderWidgetCalendar();
+        });
+
+        document.getElementById('widget-next-month-btn')!.addEventListener('click', () => {
+            this.calendarManager.nextMonth();
+            this.renderWidgetCalendar();
+        });
+
+        // Boutons plier/déplier des widgets (mode normal) - Délégation d'événements
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            const btn = target.closest('.widget-collapse-toggle') as HTMLElement;
+            if (btn) {
+                e.stopPropagation(); // Empêcher la propagation
+                const widgetId = btn.dataset.widget;
+                if (widgetId) {
+                    this.widgetManager.toggleWidgetCollapse(widgetId);
+                }
+            }
         });
 
         // Export PDF
@@ -1589,6 +1647,110 @@ class BudgetManager {
                     <div class="text-right">
                         <p class="font-bold text-red-600">${t.amount.toFixed(2)}€</p>
                     </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Ouvrir le modal de sélection de thème coloré
+    openColorThemeModal(): void {
+        const modal = document.getElementById('color-theme-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            
+            // Mettre en évidence le thème actuel
+            const currentTheme = this.themeManager.getColorTheme();
+            document.querySelectorAll('.color-theme-option').forEach(btn => {
+                const btnTheme = (btn as HTMLElement).dataset.theme;
+                if (btnTheme === currentTheme) {
+                    btn.classList.add('ring-4', 'ring-offset-2', 'ring-primary');
+                } else {
+                    btn.classList.remove('ring-4', 'ring-offset-2', 'ring-primary');
+                }
+            });
+        }
+    }
+
+    // Fermer le modal de sélection de thème coloré
+    closeColorThemeModal(): void {
+        const modal = document.getElementById('color-theme-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    // Afficher le calendrier widget
+    renderWidgetCalendar(): void {
+        const monthTitle = document.getElementById('widget-calendar-month-title');
+        const grid = document.getElementById('widget-calendar-grid');
+        const projection = document.getElementById('widget-monthly-projection');
+
+        if (!monthTitle || !grid || !projection) return;
+
+        // Titre du mois
+        monthTitle.textContent = this.calendarManager.getMonthName();
+
+        // Projection mensuelle
+        const monthlyTotal = this.calendarManager.getMonthlyProjection();
+        projection.textContent = `${monthlyTotal.toFixed(2)}€`;
+
+        // Générer la grille
+        const days = this.calendarManager.getMonthDays();
+        const data = this.dataManager.getData();
+
+        grid.innerHTML = days.map(day => {
+            const dayNum = day.date.getDate();
+            const hasTransactions = day.transactions.length > 0;
+            const hasRecurring = day.recurringTransactions.length > 0;
+            
+            let bgClass = 'bg-white dark:bg-gray-700';
+            let textClass = 'text-gray-800 dark:text-gray-200';
+            let borderClass = '';
+
+            if (!day.isCurrentMonth) {
+                bgClass = 'bg-gray-100 dark:bg-gray-800';
+                textClass = 'text-gray-400 dark:text-gray-600';
+            }
+
+            if (day.isToday) {
+                borderClass = 'ring-2 ring-primary';
+            }
+
+            // Indicateurs
+            let indicators = '';
+            if (hasTransactions) {
+                indicators += '<div class="w-2 h-2 bg-blue-500 rounded-full"></div>';
+            }
+            if (hasRecurring) {
+                indicators += '<div class="w-2 h-2 bg-orange-500 rounded-full"></div>';
+            }
+
+            // Tooltip avec détails
+            let tooltip = '';
+            if (hasTransactions || hasRecurring) {
+                const transactionsList = day.transactions.map(t => {
+                    const cat = data.categories[t.category];
+                    return `${cat?.name || t.category}: ${t.amount}€`;
+                }).join(', ');
+
+                const recurringList = day.recurringTransactions.map(r => {
+                    return `${r.name}: ${r.amount}€ (prévu)`;
+                }).join(', ');
+
+                tooltip = `title="${transactionsList}${transactionsList && recurringList ? ' | ' : ''}${recurringList}"`;
+            }
+
+            return `
+                <div class="calendar-day ${bgClass} ${borderClass} p-2 rounded-lg min-h-[80px] cursor-pointer hover:shadow-md transition-shadow" ${tooltip}>
+                    <div class="${textClass} font-semibold text-sm mb-1">${dayNum}</div>
+                    <div class="flex flex-wrap gap-1">
+                        ${indicators}
+                    </div>
+                    ${hasTransactions || hasRecurring ? `
+                        <div class="text-xs ${textClass} mt-1">
+                            ${day.transactions.reduce((sum, t) => sum + t.amount, 0) + day.recurringTransactions.reduce((sum, r) => sum + r.amount, 0)}€
+                        </div>
+                    ` : ''}
                 </div>
             `;
         }).join('');

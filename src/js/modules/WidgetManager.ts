@@ -7,6 +7,7 @@ export interface WidgetConfig {
     visible: boolean;
     order: number;
     size: 'small' | 'medium' | 'large' | 'full';
+    collapsed?: boolean;
 }
 
 export interface DashboardLayout {
@@ -27,6 +28,7 @@ export class WidgetManager {
         { id: 'recurring', name: 'Transactions Récurrentes', visible: true, order: 7, size: 'medium' },
         { id: 'quick-expense', name: 'Ajout Rapide', visible: true, order: 8, size: 'medium' },
         { id: 'categories', name: 'Mes Catégories', visible: true, order: 9, size: 'full' },
+        { id: 'calendar-widget', name: 'Calendrier', visible: true, order: 10, size: 'full' },
     ];
 
     constructor(private dataManager: DataManager) {
@@ -40,6 +42,19 @@ export class WidgetManager {
             try {
                 const layout: DashboardLayout = JSON.parse(saved);
                 this.defaultWidgets = layout.widgets;
+                
+                // Vérifier si calendar-widget existe, sinon l'ajouter
+                const hasCalendar = this.defaultWidgets.find(w => w.id === 'calendar-widget');
+                if (!hasCalendar) {
+                    this.defaultWidgets.push({ 
+                        id: 'calendar-widget', 
+                        name: 'Calendrier', 
+                        visible: true, 
+                        order: 10, 
+                        size: 'full' 
+                    });
+                    console.log('✅ Widget calendrier ajouté à la configuration');
+                }
             } catch (e) {
                 console.error('Erreur chargement layout:', e);
             }
@@ -70,12 +85,28 @@ export class WidgetManager {
         
         // Réorganiser les éléments dans le DOM selon l'ordre sauvegardé
         sortedWidgets.forEach((widget) => {
-            const element = document.querySelector(`[data-widget-id="${widget.id}"]`);
+            const element = document.querySelector(`[data-widget-id="${widget.id}"]`) as HTMLElement;
             if (element) {
                 // Appliquer la visibilité
                 if (!widget.visible) {
-                    (element as HTMLElement).style.display = 'none';
+                    element.style.display = 'none';
                 }
+                
+                // Appliquer l'état collapsed
+                if (widget.collapsed) {
+                    const content = element.querySelector('.widget-content') as HTMLElement;
+                    if (content) {
+                        content.style.display = 'none';
+                    }
+                    
+                    // Mettre à jour l'icône
+                    const collapseBtn = element.querySelector('.widget-collapse-toggle i');
+                    if (collapseBtn) {
+                        collapseBtn.classList.remove('fa-chevron-up');
+                        collapseBtn.classList.add('fa-chevron-down');
+                    }
+                }
+                
                 // Déplacer l'élément à la fin (dans l'ordre)
                 container.appendChild(element);
             }
@@ -154,9 +185,7 @@ export class WidgetManager {
                     <button class="widget-show-btn p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="Afficher">
                         <i class="fas fa-eye text-green-600"></i>
                     </button>
-                    <button class="widget-drag-handle p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-move" title="Déplacer">
-                        <i class="fas fa-grip-vertical text-gray-600 dark:text-gray-400"></i>
-                    </button>
+                    <i class="fas fa-grip-vertical text-gray-600 dark:text-gray-400 p-2 cursor-move" title="Déplacer"></i>
                 `;
             } else {
                 // Widget visible - bouton pour masquer
@@ -164,9 +193,7 @@ export class WidgetManager {
                     <button class="widget-hide-btn p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="Masquer">
                         <i class="fas fa-eye-slash text-red-600"></i>
                     </button>
-                    <button class="widget-drag-handle p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-move" title="Déplacer">
-                        <i class="fas fa-grip-vertical text-gray-600 dark:text-gray-400"></i>
-                    </button>
+                    <i class="fas fa-grip-vertical text-gray-600 dark:text-gray-400 p-2 cursor-move" title="Déplacer"></i>
                 `;
             }
 
@@ -181,10 +208,20 @@ export class WidgetManager {
             hideBtn?.addEventListener('click', () => this.hideWidgetInEditMode(widgetId!));
             showBtn?.addEventListener('click', () => this.showWidgetInEditMode(widgetId!));
 
-            // Drag & drop
-            element.draggable = true;
+            // Drag & drop - utiliser la toolbar comme handle
+            toolbar.addEventListener('mousedown', (e) => {
+                const target = e.target as HTMLElement;
+                // Seulement si on clique sur l'icône grip
+                if (target.classList.contains('fa-grip-vertical') || target.closest('.fa-grip-vertical')) {
+                    element.draggable = true;
+                }
+            });
+
             element.addEventListener('dragstart', (e) => this.handleWidgetDragStart(e));
-            element.addEventListener('dragend', (e) => this.handleWidgetDragEnd(e));
+            element.addEventListener('dragend', (e) => {
+                this.handleWidgetDragEnd(e);
+                element.draggable = false;
+            });
             element.addEventListener('dragover', (e) => this.handleWidgetDragOver(e));
             element.addEventListener('drop', (e) => this.handleWidgetDrop(e));
             element.addEventListener('dragenter', (e) => this.handleWidgetDragEnter(e));
@@ -328,6 +365,60 @@ export class WidgetManager {
             
             console.log(`✅ Widget "${widget.name}" réaffiché`);
         }
+    }
+
+    // Plier/Déplier un widget
+    toggleWidgetCollapse(widgetId: string): void {
+        const element = document.querySelector(`[data-widget-id="${widgetId}"]`) as HTMLElement;
+        if (!element) {
+            console.warn(`⚠️ Widget ${widgetId} non trouvé`);
+            return;
+        }
+
+        const widget = this.defaultWidgets.find(w => w.id === widgetId);
+        if (!widget) {
+            console.warn(`⚠️ Config widget ${widgetId} non trouvée`);
+            return;
+        }
+
+        // Chercher le contenu à plier - priorité à .widget-content
+        let content = element.querySelector('.widget-content') as HTMLElement;
+        
+        if (!content) {
+            console.warn(`⚠️ Contenu du widget ${widgetId} non trouvé`);
+            return;
+        }
+
+        // Chercher le bouton (en mode édition ou normal)
+        const collapseBtnEdit = element.querySelector('.widget-collapse-btn i');
+        const collapseBtnNormal = element.querySelector('.widget-collapse-toggle i');
+        const collapseBtn = collapseBtnEdit || collapseBtnNormal;
+
+        const isCollapsed = content.style.display === 'none';
+
+        console.log(`🔄 Toggle widget ${widgetId}, actuellement ${isCollapsed ? 'plié' : 'déplié'}`);
+
+        if (isCollapsed) {
+            // Déplier
+            content.style.display = '';
+            widget.collapsed = false;
+            if (collapseBtn) {
+                collapseBtn.classList.remove('fa-chevron-down');
+                collapseBtn.classList.add('fa-chevron-up');
+            }
+        } else {
+            // Plier
+            content.style.display = 'none';
+            widget.collapsed = true;
+            if (collapseBtn) {
+                collapseBtn.classList.remove('fa-chevron-up');
+                collapseBtn.classList.add('fa-chevron-down');
+            }
+        }
+
+        // Sauvegarder l'état
+        this.saveLayout();
+        console.log(`✅ Widget "${widget.name}" ${widget.collapsed ? 'plié' : 'déplié'}`);
     }
 
     // Drag & Drop handlers
@@ -553,6 +644,7 @@ export class WidgetManager {
             { id: 'recurring', name: 'Transactions Récurrentes', visible: true, order: 7, size: 'medium' },
             { id: 'quick-expense', name: 'Ajout Rapide', visible: true, order: 8, size: 'medium' },
             { id: 'categories', name: 'Mes Catégories', visible: true, order: 9, size: 'full' },
+            { id: 'calendar-widget', name: 'Calendrier', visible: true, order: 10, size: 'full' },
         ];
         
         // Réafficher tous les widgets

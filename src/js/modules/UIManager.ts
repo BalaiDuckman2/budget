@@ -228,8 +228,16 @@ export class UIManager {
                         <p class="font-semibold text-gray-800 dark:text-gray-200">${transaction.description || 'Sans description'}</p>
                         <p class="text-sm text-gray-600 dark:text-gray-400">${category?.name || transaction.category} • ${date.toLocaleDateString('fr-FR')}</p>
                     </div>
-                    <div class="text-right">
+                    <div class="flex items-center gap-2">
                         <p class="font-bold text-red-600 text-lg">-${transaction.amount.toFixed(2)}€</p>
+                        <div class="flex gap-1">
+                            <button class="edit-transaction-btn text-blue-600 hover:text-blue-800 text-sm p-2 rounded transition-colors" data-transaction-id="${transaction.id}" title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="delete-transaction-btn text-red-600 hover:text-red-800 text-sm p-2 rounded transition-colors" data-transaction-id="${transaction.id}" title="Supprimer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
