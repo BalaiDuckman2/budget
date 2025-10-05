@@ -19,7 +19,7 @@ export class DataManager {
     async loadData(): Promise<BudgetData> {
         try {
             console.log('📡 Chargement des données depuis le serveur...');
-            const response = await (window as any).apiClient.getData();
+            const response = await window.apiClient.getData();
             this.data = response;
             
             // Initialiser les champs manquants pour compatibilité
@@ -50,7 +50,7 @@ export class DataManager {
     async saveData(): Promise<void> {
         try {
             console.log('💾 Sauvegarde des données sur le serveur...');
-            await (window as any).apiClient.saveData(this.data);
+            await window.apiClient.saveData(this.data);
             console.log('✅ Données sauvegardées sur le serveur');
         } catch (error) {
             console.error('❌ Erreur sauvegarde données:', error);

@@ -1,12 +1,28 @@
 // Client API pour communiquer avec le serveur
-class APIClient {
-    constructor(baseURL = '') {
+import type { BudgetData, Transaction } from '@/types';
+
+interface APIResponse<T = any> {
+    success?: boolean;
+    message?: string;
+    error?: string;
+    data?: T;
+}
+
+interface TransactionResponse {
+    success: boolean;
+    transaction: Transaction;
+}
+
+export class APIClient {
+    private baseURL: string;
+
+    constructor(baseURL: string = '') {
         this.baseURL = baseURL;
     }
 
-    async request(endpoint, options = {}) {
+    private async request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
         const url = `${this.baseURL}${endpoint}`;
-        const config = {
+        const config: RequestInit = {
             headers: {
                 'Content-Type': 'application/json',
                 ...options.headers
@@ -30,41 +46,41 @@ class APIClient {
     }
 
     // Récupérer toutes les données
-    async getData() {
-        return this.request('/api/data');
+    async getData(): Promise<BudgetData> {
+        return this.request<BudgetData>('/api/data');
     }
 
     // Sauvegarder toutes les données
-    async saveData(data) {
-        return this.request('/api/data', {
+    async saveData(data: BudgetData): Promise<APIResponse> {
+        return this.request<APIResponse>('/api/data', {
             method: 'POST',
             body: JSON.stringify(data)
         });
     }
 
     // Ajouter une transaction
-    async addTransaction(transaction) {
-        return this.request('/api/transactions', {
+    async addTransaction(transaction: Partial<Transaction>): Promise<TransactionResponse> {
+        return this.request<TransactionResponse>('/api/transactions', {
             method: 'POST',
             body: JSON.stringify(transaction)
         });
     }
 
     // Modifier une transaction
-    async updateTransaction(id, transaction) {
-        return this.request(`/api/transactions/${id}`, {
+    async updateTransaction(id: string, transaction: Partial<Transaction>): Promise<TransactionResponse> {
+        return this.request<TransactionResponse>(`/api/transactions/${id}`, {
             method: 'PUT',
             body: JSON.stringify(transaction)
         });
     }
 
     // Supprimer une transaction
-    async deleteTransaction(id) {
-        return this.request(`/api/transactions/${id}`, {
+    async deleteTransaction(id: string): Promise<APIResponse> {
+        return this.request<APIResponse>(`/api/transactions/${id}`, {
             method: 'DELETE'
         });
     }
 }
 
 // Instance globale
-window.apiClient = new APIClient();
+export const apiClient = new APIClient();

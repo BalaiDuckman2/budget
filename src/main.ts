@@ -1,4 +1,5 @@
 // Point d'entrée principal de l'application Budget Manager
+import { apiClient } from './utils/api-client';
 import { ThemeManager } from './js/modules/ThemeManager';
 import { NotificationManager } from './js/modules/NotificationManager';
 import { DataManager } from './js/modules/DataManager';
@@ -13,7 +14,11 @@ import { DragDropManager } from './js/modules/DragDropManager';
 import { WidgetManager } from './js/modules/WidgetManager';
 import { CalendarManager } from './js/modules/CalendarManager';
 import { TouchGestureManager } from './js/modules/TouchGestureManager';
+import { TransactionTemplateManager } from './js/modules/TransactionTemplateManager';
 import type { BudgetTemplate } from './types';
+
+// Exposer l'API client globalement pour compatibilité
+window.apiClient = apiClient;
 
 // Gestionnaire de Budget Principal - Orchestrateur
 class BudgetManager {
@@ -31,6 +36,7 @@ class BudgetManager {
     private widgetManager: WidgetManager;
     private calendarManager: CalendarManager;
     private _touchGestureManager: TouchGestureManager;
+    private templateManager: TransactionTemplateManager;
     
     // Anti-spam notifications
     private lastAlertKey: string | null = null;
@@ -53,6 +59,7 @@ class BudgetManager {
         this.widgetManager = new WidgetManager(this.dataManager);
         this.calendarManager = new CalendarManager(this.dataManager);
         this._touchGestureManager = new TouchGestureManager();
+        this.templateManager = new TransactionTemplateManager(this.dataManager);
         
         this.init();
     }
@@ -171,6 +178,7 @@ class BudgetManager {
         this.updateRecurringTransactions();
         this.updateTopExpenses();
         this.renderWidgetCalendar();
+        this.renderQuickTemplates();
     }
 
     // Configuration initiale
@@ -545,6 +553,60 @@ class BudgetManager {
         document.getElementById('settings-modal')!.addEventListener('click', (e) => {
             if ((e.target as HTMLElement).id === 'settings-modal') {
                 document.getElementById('settings-modal')!.classList.add('hidden');
+            }
+        });
+
+        // === TEMPLATES DE TRANSACTIONS ===
+        
+        // Bouton pour ouvrir le modal de gestion des templates
+        document.getElementById('manage-templates-btn')?.addEventListener('click', () => {
+            this.openTemplatesModal();
+        });
+
+        // Bouton pour ouvrir le modal d'ajout de template
+        document.getElementById('add-template-btn')?.addEventListener('click', () => {
+            this.openAddTemplateModal();
+        });
+
+        // Fermer les modals de templates
+        document.querySelectorAll('.close-templates-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('templates-modal')!.classList.add('hidden');
+            });
+        });
+
+        document.querySelectorAll('.close-add-template-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('add-template-modal')!.classList.add('hidden');
+            });
+        });
+
+        // Soumettre le formulaire d'ajout de template
+        document.getElementById('add-template-form')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.addTransactionTemplate();
+        });
+
+        // Délégation d'événements pour les boutons de templates
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            
+            // Utiliser un template
+            if (target.closest('.use-template-btn')) {
+                const btn = target.closest('.use-template-btn') as HTMLElement;
+                const templateId = btn.dataset.templateId;
+                if (templateId) {
+                    this.useTransactionTemplate(templateId);
+                }
+            }
+            
+            // Supprimer un template
+            if (target.closest('.delete-template-btn')) {
+                const btn = target.closest('.delete-template-btn') as HTMLElement;
+                const templateId = btn.dataset.templateId;
+                if (templateId) {
+                    this.deleteTransactionTemplate(templateId);
+                }
             }
         });
     }
@@ -1786,6 +1848,200 @@ class BudgetManager {
         } catch (error) {
             this.uiManager.showNotification('❌ Erreur lors de l\'actualisation', 'error');
         }
+    }
+
+    // === GESTION DES TEMPLATES DE TRANSACTIONS ===
+
+    // Afficher le modal de gestion des templates
+    openTemplatesModal(): void {
+        const modal = document.getElementById('templates-modal');
+        if (!modal) return;
+        
+        this.renderTemplatesList();
+        modal.classList.remove('hidden');
+    }
+
+    // Afficher le modal d'ajout de template
+    openAddTemplateModal(): void {
+        const modal = document.getElementById('add-template-modal');
+        if (!modal) return;
+        
+        // Remplir le select des catégories
+        const select = document.getElementById('template-category') as HTMLSelectElement;
+        if (select) {
+            const data = this.dataManager.getData();
+            select.innerHTML = '<option value="">Choisir une catégorie</option>';
+            Object.entries(data.categories).forEach(([key, category]) => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = category.name;
+                select.appendChild(option);
+            });
+        }
+        
+        modal.classList.remove('hidden');
+    }
+
+    // Rendre la liste des templates
+    renderTemplatesList(): void {
+        const container = document.getElementById('templates-list');
+        if (!container) return;
+        
+        const templates = this.templateManager.getTemplates();
+        const data = this.dataManager.getData();
+        
+        if (templates.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-receipt text-4xl mb-3"></i>
+                    <p>Aucun paiement habituel</p>
+                    <button class="mt-4 text-primary hover:underline" onclick="budgetManager.importDefaultTemplates()">
+                        Importer des exemples
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = templates.map(template => {
+            const category = data.categories[template.category];
+            return `
+                <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="text-3xl">${template.icon}</span>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-800 dark:text-gray-200">${template.name}</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">${template.description}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">${category?.name || template.category}</span>
+                                    <span class="text-xs text-gray-500">Utilisé ${template.usageCount} fois</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl font-bold text-primary">${template.amount.toFixed(2)}€</span>
+                            <button class="use-template-btn bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all" data-template-id="${template.id}">
+                                <i class="fas fa-plus"></i> Utiliser
+                            </button>
+                            <button class="delete-template-btn text-red-500 hover:text-red-700 p-2" data-template-id="${template.id}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Ajouter un nouveau template
+    addTransactionTemplate(): void {
+        try {
+            const name = (document.getElementById('template-name') as HTMLInputElement).value;
+            const category = (document.getElementById('template-category') as HTMLSelectElement).value;
+            const amount = parseFloat((document.getElementById('template-amount') as HTMLInputElement).value);
+            const description = (document.getElementById('template-description') as HTMLInputElement).value;
+            const icon = (document.getElementById('template-icon') as HTMLInputElement).value || '💳';
+            
+            if (!name || !category || !amount) {
+                this.uiManager.showNotification('Veuillez remplir tous les champs obligatoires', 'error');
+                return;
+            }
+            
+            this.templateManager.addTemplate(name, category, amount, description, icon);
+            this.dataManager.saveData();
+            
+            this.uiManager.showNotification(`✅ Template "${name}" créé`, 'success');
+            
+            // Fermer le modal et réinitialiser le formulaire
+            document.getElementById('add-template-modal')!.classList.add('hidden');
+            (document.getElementById('add-template-form') as HTMLFormElement).reset();
+            
+            // Rafraîchir la liste
+            this.renderTemplatesList();
+            this.renderQuickTemplates();
+        } catch (error) {
+            this.uiManager.showNotification((error as Error).message, 'error');
+        }
+    }
+
+    // Utiliser un template pour créer une transaction
+    useTransactionTemplate(templateId: string): void {
+        try {
+            const template = this.templateManager.useTemplate(templateId);
+            if (!template) {
+                this.uiManager.showNotification('Template introuvable', 'error');
+                return;
+            }
+            
+            // Créer la transaction - utiliser le nom du template si pas de description
+            const description = template.description || template.name;
+            this.transactionManager.addExpense(template.category, template.amount, description);
+            this.dataManager.saveData();
+            this.updateDashboard();
+            
+            const data = this.dataManager.getData();
+            this.uiManager.showNotification(`${template.icon} ${template.name} ajouté - ${template.amount.toFixed(2)}€`, 'success');
+            this.checkAdvancedAlerts({ changedCategory: template.category });
+            
+            // Rafraîchir la liste pour mettre à jour le compteur
+            this.renderTemplatesList();
+            this.renderQuickTemplates();
+        } catch (error) {
+            this.uiManager.showNotification((error as Error).message, 'error');
+        }
+    }
+
+    // Supprimer un template
+    deleteTransactionTemplate(templateId: string): void {
+        if (!confirm('Supprimer ce paiement habituel ?')) return;
+        
+        const success = this.templateManager.deleteTemplate(templateId);
+        if (success) {
+            this.dataManager.saveData();
+            this.uiManager.showNotification('Template supprimé', 'success');
+            this.renderTemplatesList();
+            this.renderQuickTemplates();
+        } else {
+            this.uiManager.showNotification('Erreur lors de la suppression', 'error');
+        }
+    }
+
+    // Importer les templates par défaut
+    importDefaultTemplates(): void {
+        this.templateManager.importDefaultTemplates();
+        this.dataManager.saveData();
+        this.uiManager.showNotification('✅ Templates importés', 'success');
+        this.renderTemplatesList();
+        this.renderQuickTemplates();
+    }
+
+    // Rendre les templates rapides (les plus utilisés)
+    renderQuickTemplates(): void {
+        const container = document.getElementById('quick-templates');
+        if (!container) return;
+        
+        const templates = this.templateManager.getMostUsedTemplates(6);
+        
+        if (templates.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-gray-500 dark:text-gray-400 py-4">
+                    <p class="text-sm">Aucun paiement habituel</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = templates.map(template => `
+            <button class="use-template-btn bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 p-3 rounded-lg shadow-sm transition-all flex items-center gap-2 w-full text-left" data-template-id="${template.id}">
+                <span class="text-2xl">${template.icon}</span>
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-gray-800 dark:text-gray-200 truncate">${template.name}</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">${template.amount.toFixed(2)}€</div>
+                </div>
+                <i class="fas fa-plus text-green-500"></i>
+            </button>
+        `).join('');
     }
 }
 

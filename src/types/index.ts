@@ -39,6 +39,18 @@ export interface SavingsGoal {
     completed: boolean;
 }
 
+export interface TransactionTemplate {
+    id: string;
+    name: string;
+    category: string;
+    amount: number;
+    description: string;
+    icon?: string;
+    color?: string;
+    createdAt: string;
+    usageCount: number;
+}
+
 export interface BudgetData {
     salary: number;
     currentMonth: string;
@@ -46,6 +58,7 @@ export interface BudgetData {
     transactions: Transaction[];
     recurringTransactions: RecurringTransaction[];
     savingsGoals: SavingsGoal[];
+    transactionTemplates?: TransactionTemplate[];
 }
 
 export interface CategoryStats {
