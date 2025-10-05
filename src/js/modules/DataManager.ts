@@ -29,6 +29,12 @@ export class DataManager {
             if (!this.data.recurringTransactions) {
                 this.data.recurringTransactions = [];
             }
+            if (!this.data.monthlyHistory) {
+                this.data.monthlyHistory = [];
+            }
+            if (!this.data.transactionTemplates) {
+                this.data.transactionTemplates = [];
+            }
             
             // Ajouter des IDs aux transactions existantes qui n'en ont pas
             this.data.transactions = this.data.transactions.map((transaction, index) => {

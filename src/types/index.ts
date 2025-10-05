@@ -51,6 +51,15 @@ export interface TransactionTemplate {
     usageCount: number;
 }
 
+export interface MonthlyHistory {
+    month: string; // Format: YYYY-MM
+    salary: number;
+    categories: Record<string, Category>;
+    transactions: Transaction[];
+    totalSpent: number;
+    totalBudget: number;
+}
+
 export interface BudgetData {
     salary: number;
     currentMonth: string;
@@ -59,6 +68,7 @@ export interface BudgetData {
     recurringTransactions: RecurringTransaction[];
     savingsGoals: SavingsGoal[];
     transactionTemplates?: TransactionTemplate[];
+    monthlyHistory?: MonthlyHistory[];
 }
 
 export interface CategoryStats {
@@ -100,4 +110,34 @@ export type NotificationType = 'success' | 'error' | 'warning' | 'info';
 export interface ThemeToggleResult {
     message: string;
     isDark: boolean;
+}
+
+export interface MonthlyComparison {
+    category: string;
+    currentMonth: number;
+    previousMonth: number;
+    difference: number;
+    percentageChange: number;
+    trend: 'up' | 'down' | 'stable';
+}
+
+export interface BudgetPrediction {
+    category: string;
+    currentSpent: number;
+    budget: number;
+    predictedTotal: number;
+    daysRemaining: number;
+    averagePerDay: number;
+    riskLevel: 'low' | 'medium' | 'high';
+    suggestion?: string;
+}
+
+export interface AdvancedStats {
+    averagePerDay: number;
+    topCategory: { name: string; percentage: number };
+    savingsRate: number;
+    fixedExpenses: number;
+    variableExpenses: number;
+    monthlyTrend: number;
+    projectedEndOfMonth: number;
 }

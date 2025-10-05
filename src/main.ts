@@ -15,6 +15,7 @@ import { WidgetManager } from './js/modules/WidgetManager';
 import { CalendarManager } from './js/modules/CalendarManager';
 import { TouchGestureManager } from './js/modules/TouchGestureManager';
 import { TransactionTemplateManager } from './js/modules/TransactionTemplateManager';
+import { AnalyticsManager } from './js/modules/AnalyticsManager';
 import type { BudgetTemplate } from './types';
 
 // Exposer l'API client globalement pour compatibilité
@@ -37,6 +38,7 @@ class BudgetManager {
     private calendarManager: CalendarManager;
     private _touchGestureManager: TouchGestureManager;
     private templateManager: TransactionTemplateManager;
+    private analyticsManager: AnalyticsManager;
     
     // Anti-spam notifications
     private lastAlertKey: string | null = null;
@@ -60,6 +62,7 @@ class BudgetManager {
         this.calendarManager = new CalendarManager(this.dataManager);
         this._touchGestureManager = new TouchGestureManager();
         this.templateManager = new TransactionTemplateManager(this.dataManager);
+        this.analyticsManager = new AnalyticsManager(this.dataManager);
         
         this.init();
     }
@@ -179,6 +182,9 @@ class BudgetManager {
         this.updateTopExpenses();
         this.renderWidgetCalendar();
         this.renderQuickTemplates();
+        this.renderMonthlyComparison();
+        this.renderBudgetPredictions();
+        this.renderAdvancedStats();
     }
 
     // Configuration initiale
@@ -769,10 +775,13 @@ class BudgetManager {
 
     // Réinitialiser le mois
     resetMonth(): void {
+        // Sauvegarder le mois actuel dans l'historique avant de réinitialiser
+        this.analyticsManager.saveCurrentMonthToHistory();
+        
         this.dataManager.resetMonth();
         this.dataManager.saveData();
         this.updateDashboard();
-        this.uiManager.showNotification('Nouveau mois initialisé !');
+        this.uiManager.showNotification('Nouveau mois initialisé ! Historique sauvegardé.');
         document.getElementById('settings-modal')!.classList.add('hidden');
     }
 
@@ -2042,6 +2051,187 @@ class BudgetManager {
                 <i class="fas fa-plus text-green-500"></i>
             </button>
         `).join('');
+    }
+
+    // === ANALYTICS & PRÉDICTIONS ===
+
+    // Rendre la comparaison mensuelle
+    renderMonthlyComparison(): void {
+        const container = document.getElementById('monthly-comparison');
+        if (!container) return;
+
+        const comparisons = this.analyticsManager.getMonthlyComparison();
+
+        if (comparisons.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-gray-500 dark:text-gray-400 py-4">
+                    <i class="fas fa-calendar-alt text-3xl mb-2"></i>
+                    <p class="text-sm">Pas assez de données</p>
+                    <p class="text-xs mt-1">Utilisez l'app pendant 2 mois pour voir les comparaisons</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = comparisons.slice(0, 5).map(comp => {
+            const trendIcon = comp.trend === 'up' ? '📈' : comp.trend === 'down' ? '📉' : '➡️';
+            const trendColor = comp.trend === 'up' ? 'text-red-500' : comp.trend === 'down' ? 'text-green-500' : 'text-gray-500';
+            const sign = comp.difference >= 0 ? '+' : '';
+
+            return `
+                <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-gray-800 dark:text-gray-200">${comp.category}</span>
+                        <span class="text-2xl">${trendIcon}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <div>
+                            <div class="text-gray-600 dark:text-gray-400">Ce mois: ${comp.currentMonth.toFixed(2)}€</div>
+                            <div class="text-gray-500 dark:text-gray-500">Mois dernier: ${comp.previousMonth.toFixed(2)}€</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="${trendColor} font-bold">${sign}${comp.percentageChange.toFixed(1)}%</div>
+                            <div class="text-xs text-gray-500">${sign}${comp.difference.toFixed(2)}€</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Rendre les prédictions budgétaires
+    renderBudgetPredictions(): void {
+        const container = document.getElementById('budget-predictions');
+        if (!container) return;
+
+        const predictions = this.analyticsManager.getBudgetPredictions();
+
+        if (predictions.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-gray-500 dark:text-gray-400 py-4">
+                    <i class="fas fa-crystal-ball text-3xl mb-2"></i>
+                    <p class="text-sm">Aucune prédiction disponible</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = predictions.slice(0, 5).map(pred => {
+            const riskColors = {
+                low: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300',
+                medium: 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300',
+                high: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'
+            };
+
+            const riskIcons = {
+                low: '✅',
+                medium: '⚠️',
+                high: '🚨'
+            };
+
+            const percentage = (pred.predictedTotal / pred.budget) * 100;
+
+            return `
+                <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-gray-800 dark:text-gray-200">${pred.category}</span>
+                        <span class="text-xl">${riskIcons[pred.riskLevel]}</span>
+                    </div>
+                    <div class="mb-2">
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                            <span>Actuel: ${pred.currentSpent.toFixed(2)}€</span>
+                            <span>Prévu: ${pred.predictedTotal.toFixed(2)}€</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                            <div class="h-2 rounded-full transition-all ${percentage >= 100 ? 'bg-red-500' : percentage >= 80 ? 'bg-orange-500' : 'bg-green-500'}" 
+                                 style="width: ${Math.min(percentage, 100)}%"></div>
+                        </div>
+                    </div>
+                    ${pred.suggestion ? `
+                        <div class="text-xs ${riskColors[pred.riskLevel]} px-2 py-1 rounded">
+                            ${pred.suggestion}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Rendre les statistiques avancées
+    renderAdvancedStats(): void {
+        const container = document.getElementById('advanced-stats');
+        if (!container) return;
+
+        const stats = this.analyticsManager.getAdvancedStats();
+
+        if (!stats) {
+            container.innerHTML = `
+                <div class="text-center text-gray-500 dark:text-gray-400 py-4">
+                    <i class="fas fa-chart-pie text-3xl mb-2"></i>
+                    <p class="text-sm">Pas assez de données</p>
+                </div>
+            `;
+            return;
+        }
+
+        const trendIcon = stats.monthlyTrend > 0 ? '📈' : stats.monthlyTrend < 0 ? '📉' : '➡️';
+        const trendColor = stats.monthlyTrend > 0 ? 'text-red-500' : stats.monthlyTrend < 0 ? 'text-green-500' : 'text-gray-500';
+
+        container.innerHTML = `
+            <div class="space-y-3">
+                <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Dépense moyenne/jour</div>
+                    <div class="text-xl font-bold text-primary dark:text-blue-400">${stats.averagePerDay.toFixed(2)}€</div>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Catégorie #1</div>
+                    <div class="flex justify-between items-center">
+                        <div class="font-semibold text-gray-800 dark:text-gray-200">${stats.topCategory.name}</div>
+                        <div class="text-primary dark:text-blue-400 font-bold">${stats.topCategory.percentage.toFixed(1)}%</div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Taux d'épargne</div>
+                    <div class="flex items-center gap-2">
+                        <div class="text-xl font-bold ${stats.savingsRate >= 20 ? 'text-green-500' : stats.savingsRate >= 10 ? 'text-orange-500' : 'text-red-500'}">
+                            ${stats.savingsRate.toFixed(1)}%
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            ${stats.savingsRate >= 20 ? '🌟 Excellent' : stats.savingsRate >= 10 ? '👍 Bien' : '⚠️ À améliorer'}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-2">Répartition dépenses</div>
+                    <div class="flex gap-2 text-xs">
+                        <div class="flex-1 bg-blue-500 text-white px-2 py-1 rounded text-center">
+                            Fixes: ${stats.fixedExpenses.toFixed(0)}€
+                        </div>
+                        <div class="flex-1 bg-purple-500 text-white px-2 py-1 rounded text-center">
+                            Variables: ${stats.variableExpenses.toFixed(0)}€
+                        </div>
+                    </div>
+                </div>
+
+                ${stats.monthlyTrend !== 0 ? `
+                    <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                        <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Tendance vs mois dernier</div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">${trendIcon}</span>
+                            <span class="${trendColor} font-bold">${stats.monthlyTrend > 0 ? '+' : ''}${stats.monthlyTrend.toFixed(1)}%</span>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div class="text-xs text-blue-600 dark:text-blue-400 mb-1">Projection fin de mois</div>
+                    <div class="text-xl font-bold text-blue-700 dark:text-blue-300">${stats.projectedEndOfMonth.toFixed(2)}€</div>
+                </div>
+            </div>
+        `;
     }
 }
 
