@@ -3,10 +3,42 @@ import type { DataManager } from './DataManager';
 
 // Gestionnaire d'interface utilisateur
 export class UIManager {
-    constructor(private dataManager: DataManager) {}
+    private isInitialLoad: boolean = true;
+    private notificationHistory: Map<string, number> = new Map();
+
+    constructor(private dataManager: DataManager) {
+        // Après 3 secondes, considérer que le chargement initial est terminé
+        setTimeout(() => {
+            this.isInitialLoad = false;
+        }, 3000);
+
+        // Nettoyer l'historique des notifications toutes les 10 secondes
+        setInterval(() => {
+            const now = Date.now();
+            for (const [message, timestamp] of this.notificationHistory.entries()) {
+                if (now - timestamp > 10000) {
+                    this.notificationHistory.delete(message);
+                }
+            }
+        }, 10000);
+    }
 
     // Afficher une notification
-    showNotification(message: string, type: NotificationType = 'success'): void {
+    showNotification(message: string, type: NotificationType = 'success', force: boolean = false): void {
+        // Ne pas afficher les notifications de succès pendant le chargement initial
+        // sauf si force = true
+        if (this.isInitialLoad && type === 'success' && !force) {
+            console.log(`[Notification silencieuse] ${message}`);
+            return;
+        }
+
+        // Éviter les notifications en double (même message dans les 2 dernières secondes)
+        const now = Date.now();
+        const lastShown = this.notificationHistory.get(message);
+        if (lastShown && (now - lastShown) < 2000) {
+            return;
+        }
+        this.notificationHistory.set(message, now);
         const notification = document.createElement('div');
         notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full max-w-sm`;
         

@@ -841,50 +841,10 @@ class BudgetManager {
         }
     }
 
-    // Vérification d'alertes avancées
+    // Vérification d'alertes avancées (DÉSACTIVÉ)
     checkAdvancedAlerts(context: { changedCategory?: string } = {}): void {
-        try {
-            const data = this.dataManager.getData();
-            const totalBudget = Object.values(data.categories).reduce((sum, cat) => sum + (cat.budget || 0), 0);
-            const totalSpent = Object.values(data.categories).reduce((sum, cat) => sum + (cat.spent || 0), 0);
-            const globalPercent = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
-
-            const messages: string[] = [];
-
-            if (globalPercent >= 100) {
-                messages.push('⚠️ Budget global dépassé !');
-            } else if (globalPercent >= 80) {
-                messages.push('⚠️ Vous avez dépassé 80% du budget global');
-            }
-
-            const categoriesToCheck = context.changedCategory ? [context.changedCategory] : Object.keys(data.categories);
-            categoriesToCheck.forEach(key => {
-                const cat = data.categories[key];
-                if (!cat) return;
-                const percent = cat.budget > 0 ? (cat.spent / cat.budget) * 100 : 0;
-                if (percent >= 100) {
-                    messages.push(`🚨 Catégorie ${cat.name}: budget dépassé !`);
-                } else if (percent >= 80) {
-                    messages.push(`⚠️ Catégorie ${cat.name}: 80% du budget utilisé`);
-                }
-            });
-
-            if (messages.length === 0) return;
-
-            const unique = [...new Set(messages)];
-            const key = unique.join('|');
-            const now = Date.now();
-            if (this.lastAlertKey === key && now - this.lastAlertAt < 4000) {
-                return;
-            }
-            this.lastAlertKey = key;
-            this.lastAlertAt = now;
-
-            const html = unique.join('<br>');
-            this.uiManager.showNotification(html, 'error');
-        } catch (e) {
-            // Ignorer silencieusement les erreurs d'alerte
-        }
+        // Alertes automatiques désactivées - Les utilisateurs peuvent voir l'état dans le dashboard
+        return;
     }
 
     // Méthodes déléguées (suite dans le prochain fichier pour éviter la limite de taille)
@@ -1855,13 +1815,22 @@ class BudgetManager {
     // Pull to refresh
     async handlePullToRefresh(): Promise<void> {
         console.log('🔄 Pull to refresh...');
-        this.uiManager.showNotification('🔄 Actualisation...', 'info');
         
         try {
             // Recharger les données depuis le serveur
             await this.dataManager.loadData();
             this.updateDashboard();
-            this.uiManager.showNotification('✅ Données actualisées', 'success');
+            
+            // Afficher la notification seulement si c'est un pull to refresh manuel
+            // (pas au chargement initial)
+            const lastRefresh = localStorage.getItem('lastRefreshTime');
+            const now = Date.now();
+            
+            // Afficher seulement si le dernier refresh date de plus de 5 secondes
+            if (!lastRefresh || (now - parseInt(lastRefresh)) > 5000) {
+                this.uiManager.showNotification('✅ Données actualisées', 'success');
+                localStorage.setItem('lastRefreshTime', now.toString());
+            }
         } catch (error) {
             this.uiManager.showNotification('❌ Erreur lors de l\'actualisation', 'error');
         }

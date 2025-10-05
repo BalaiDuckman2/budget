@@ -80,20 +80,16 @@ export class MobileUIManager {
         
         switch(tabName) {
             case 'dashboard':
-                // Afficher résumé, graphique
-                this.showWidgets(['summary', 'chart']);
+                // Afficher résumé, graphique, catégories
+                this.showWidgets(['summary', 'chart', 'categories']);
                 break;
             case 'transactions':
-                // Afficher transactions et templates
-                this.showWidgets(['transactions', 'quick-templates-widget']);
-                break;
-            case 'categories':
-                // Afficher catégories et ajout rapide
-                this.showWidgets(['categories', 'quick-expense']);
+                // Afficher transactions, templates et récurrentes
+                this.showWidgets(['transactions', 'quick-templates-widget', 'recurring']);
                 break;
             case 'analytics':
                 // Afficher analytics, prédictions et statistiques avancées
-                this.showWidgets(['comparison', 'predictions', 'stats', 'top-expenses', 'recurring']);
+                this.showWidgets(['comparison', 'predictions', 'stats', 'top-expenses']);
                 break;
         }
 

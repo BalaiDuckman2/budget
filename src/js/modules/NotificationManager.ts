@@ -15,100 +15,22 @@ export class NotificationManager {
         this.checkRecurringAlerts();
     }
 
-    // Alertes de budget
+    // Alertes de budget (DÉSACTIVÉ)
     checkBudgetAlerts(): void {
-        const data = this.dataManager.getData();
-        
-        Object.entries(data.categories).forEach(([, category]) => {
-            const percentage = category.budget > 0 ? (category.spent / category.budget) * 100 : 0;
-            
-            // Alerte à 80%
-            if (percentage >= 80 && percentage < 100) {
-                this.showNotification(
-                    `⚠️ Attention ! Vous avez dépensé ${percentage.toFixed(0)}% de votre budget ${category.name}`,
-                    'warning'
-                );
-            }
-            
-            // Alerte à 100%
-            if (percentage >= 100 && percentage < 110) {
-                this.showNotification(
-                    `🚨 Budget ${category.name} dépassé ! (${percentage.toFixed(0)}%)`,
-                    'error'
-                );
-            }
-            
-            // Alerte critique à 120%
-            if (percentage >= 120) {
-                this.showNotification(
-                    `🔴 ALERTE ! Budget ${category.name} largement dépassé ! (${percentage.toFixed(0)}%)`,
-                    'error'
-                );
-            }
-        });
+        // Alertes automatiques désactivées
+        return;
     }
 
-    // Alertes pour les objectifs d'épargne
+    // Alertes pour les objectifs d'épargne (DÉSACTIVÉ)
     checkGoalAlerts(): void {
-        const data = this.dataManager.getData();
-        
-        data.savingsGoals.forEach(goal => {
-            const progress = goal.target > 0 ? (goal.current / goal.target) * 100 : 0;
-            const deadline = new Date(goal.deadline);
-            const today = new Date();
-            const daysLeft = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            
-            // Objectif atteint
-            if (progress >= 100 && progress < 105) {
-                this.showNotification(
-                    `🎉 Félicitations ! Objectif "${goal.name}" atteint !`,
-                    'success'
-                );
-            }
-            
-            // Échéance proche (7 jours)
-            if (daysLeft <= 7 && daysLeft > 0 && progress < 100) {
-                this.showNotification(
-                    `⏰ Plus que ${daysLeft} jours pour atteindre "${goal.name}" (${progress.toFixed(0)}%)`,
-                    'warning'
-                );
-            }
-            
-            // Échéance dépassée
-            if (daysLeft < 0 && progress < 100) {
-                this.showNotification(
-                    `❌ Objectif "${goal.name}" non atteint (${progress.toFixed(0)}%)`,
-                    'error'
-                );
-            }
-        });
+        // Alertes automatiques désactivées
+        return;
     }
 
-    // Alertes pour les transactions récurrentes
+    // Alertes pour les transactions récurrentes (DÉSACTIVÉ)
     checkRecurringAlerts(): void {
-        const data = this.dataManager.getData();
-        const today = new Date();
-        const currentDay = today.getDate();
-        
-        data.recurringTransactions.forEach(recurring => {
-            if (!recurring.active) return;
-            
-            // Rappel 2 jours avant
-            if (recurring.frequency === 'monthly' && recurring.day - currentDay === 2) {
-                this.showNotification(
-                    `📅 Rappel : "${recurring.name}" prévu dans 2 jours (${recurring.amount}€)`,
-                    'info'
-                );
-            }
-            
-            // Rappel le jour même
-            if (recurring.day === currentDay) {
-                this.showNotification(
-                    `💰 Aujourd'hui : "${recurring.name}" (${recurring.amount}€)`,
-                    'info'
-                );
-            }
-        });
+        // Alertes automatiques désactivées
+        return;
     }
 
     // Afficher une notification
