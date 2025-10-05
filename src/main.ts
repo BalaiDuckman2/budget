@@ -241,24 +241,37 @@ class BudgetManager {
             this.openTransactionsModal('all');
         });
 
-        // Event listeners pour les transactions
+        // Event listeners pour les transactions - Utiliser la délégation mais avec vérification stricte
         document.addEventListener('click', (e) => {
             const target = e.target as HTMLElement;
+            
+            // Vérifier si on a cliqué directement sur un bouton ou son icône
+            const clickedElement = target.classList.contains('edit-transaction-btn') || target.classList.contains('delete-transaction-btn')
+                ? target
+                : target.parentElement;
+            
+            // Bouton de suppression
+            if (clickedElement?.classList.contains('delete-transaction-btn')) {
+                e.stopPropagation();
+                e.preventDefault();
+                const transactionId = clickedElement.dataset.transactionId!;
+                this.deleteTransaction(transactionId);
+                return;
+            }
+            
+            // Bouton de modification
+            if (clickedElement?.classList.contains('edit-transaction-btn')) {
+                e.stopPropagation();
+                e.preventDefault();
+                const transactionId = clickedElement.dataset.transactionId!;
+                this.openEditTransactionModal(transactionId);
+                return;
+            }
             
             if (target.matches('[data-category="all"]')) {
                 this.uiManager.updateButtonColors('all');
                 const searchTerm = (document.getElementById('transaction-search') as HTMLInputElement)?.value || '';
                 this.filterTransactions('all', searchTerm);
-            }
-            
-            if (target.closest('.edit-transaction-btn')) {
-                const transactionId = target.closest<HTMLElement>('.edit-transaction-btn')!.dataset.transactionId!;
-                this.openEditTransactionModal(transactionId);
-            }
-            
-            if (target.closest('.delete-transaction-btn')) {
-                const transactionId = target.closest<HTMLElement>('.delete-transaction-btn')!.dataset.transactionId!;
-                this.deleteTransaction(transactionId);
             }
         });
 

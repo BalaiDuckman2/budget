@@ -19,8 +19,8 @@ export class TouchGestureManager {
 
         console.log('📱 Initialisation des gestes tactiles...');
 
-        // Swipe sur les transactions pour supprimer
-        this.initializeTransactionSwipe();
+        // Swipe sur les transactions pour supprimer - DÉSACTIVÉ (conflit avec les boutons)
+        // this.initializeTransactionSwipe();
 
         // Swipe sur les catégories
         this.initializeCategorySwipe();

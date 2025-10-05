@@ -1,6 +1,10 @@
+import { SwipeGestureManager } from './SwipeGestureManager';
+
 // Gestionnaire d'interface mobile
 export class MobileUIManager {
     private currentTab: string = 'dashboard';
+    private swipeManager: SwipeGestureManager | null = null;
+    private tabs: string[] = ['dashboard', 'transactions', 'analytics'];
 
     constructor() {
         this.init();
@@ -10,12 +14,41 @@ export class MobileUIManager {
         this.setupBottomNav();
         this.setupMobileHeader();
         this.detectMobile();
+        this.setupSwipeGestures();
         
         // Initialiser l'affichage correct au chargement
         if (this.isMobile()) {
             // Afficher uniquement le dashboard au démarrage
             this.switchTab('dashboard');
         }
+    }
+
+    // Configuration des gestes tactiles
+    setupSwipeGestures(): void {
+        if (!this.isMobile()) return;
+
+        const dashboardScreen = document.getElementById('dashboard-screen');
+        if (!dashboardScreen) return;
+
+        this.swipeManager = new SwipeGestureManager(
+            dashboardScreen,
+            () => this.navigateToNextTab(),
+            () => this.navigateToPreviousTab()
+        );
+    }
+
+    // Navigation vers l'onglet suivant
+    navigateToNextTab(): void {
+        const currentIndex = this.tabs.indexOf(this.currentTab);
+        const nextIndex = (currentIndex + 1) % this.tabs.length;
+        this.switchTab(this.tabs[nextIndex]);
+    }
+
+    // Navigation vers l'onglet précédent
+    navigateToPreviousTab(): void {
+        const currentIndex = this.tabs.indexOf(this.currentTab);
+        const prevIndex = (currentIndex - 1 + this.tabs.length) % this.tabs.length;
+        this.switchTab(this.tabs[prevIndex]);
     }
 
     // Détecter si on est sur mobile

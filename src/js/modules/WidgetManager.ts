@@ -29,6 +29,7 @@ export class WidgetManager {
         { id: 'quick-expense', name: 'Ajout Rapide', visible: true, order: 8, size: 'medium' },
         { id: 'categories', name: 'Mes Catégories', visible: true, order: 9, size: 'full' },
         { id: 'calendar-widget', name: 'Calendrier', visible: true, order: 10, size: 'full' },
+        { id: 'quick-templates-widget', name: 'Paiements Habituels', visible: true, order: 11, size: 'medium' },
     ];
 
     constructor(_dataManager: DataManager) {
@@ -645,6 +646,7 @@ export class WidgetManager {
             { id: 'quick-expense', name: 'Ajout Rapide', visible: true, order: 8, size: 'medium' },
             { id: 'categories', name: 'Mes Catégories', visible: true, order: 9, size: 'full' },
             { id: 'calendar-widget', name: 'Calendrier', visible: true, order: 10, size: 'full' },
+            { id: 'quick-templates-widget', name: 'Paiements Habituels', visible: true, order: 11, size: 'medium' },
         ];
         
         // Réafficher tous les widgets

@@ -1,0 +1,776 @@
+/* ===================================
+   AMÉLIORATIONS MOBILE
+   =================================== */
+
+/* 1. ÉLÉMENTS TACTILES - Taille et espacement optimisés */
+@media (max-width: 768px) {
+    /* Boutons plus grands et espacés */
+    button {
+        min-height: 44px; /* Taille minimale recommandée Apple/Google */
+        min-width: 44px;
+        padding: 12px 16px;
+        font-size: 16px; /* Évite le zoom automatique sur iOS */
+    }
+
+    /* Bottom navigation - Zone tactile optimale */
+    #mobile-bottom-nav button {
+        min-height: 64px;
+        padding: 8px;
+        -webkit-tap-highlight-color: rgba(99, 102, 241, 0.1);
+    }
+
+    /* Cartes interactives - Meilleur feedback tactile */
+    .category-card,
+    [data-widget-id] {
+        -webkit-tap-highlight-color: rgba(99, 102, 241, 0.1);
+        touch-action: manipulation;
+    }
+
+    /* Inputs - Taille optimale pour mobile */
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="tel"],
+    select,
+    textarea {
+        min-height: 48px;
+        font-size: 16px; /* Évite le zoom sur iOS */
+        padding: 12px 16px;
+        border-radius: 12px;
+    }
+
+    /* Espacement entre éléments interactifs */
+    .space-y-3 > * + * {
+        margin-top: 12px;
+    }
+
+    .space-y-4 > * + * {
+        margin-top: 16px;
+    }
+
+    .gap-3 {
+        gap: 12px;
+    }
+
+    .gap-4 {
+        gap: 16px;
+    }
+}
+
+/* 2. CARTES DE CATÉGORIES - Optimisation mobile */
+@media (max-width: 768px) {
+    /* Une seule colonne sur mobile */
+    #categories-list {
+        grid-template-columns: 1fr !important;
+        gap: 16px;
+    }
+
+    .category-card {
+        padding: 20px;
+        border-radius: 16px;
+        margin-bottom: 0;
+    }
+
+    /* Texte plus lisible */
+    .category-card h3 {
+        font-size: 18px;
+        margin-bottom: 8px;
+    }
+
+    .category-card .text-2xl {
+        font-size: 24px;
+    }
+
+    /* Barre de progression plus visible */
+    .category-card .h-3 {
+        height: 8px;
+    }
+
+    /* Bouton "Voir les transactions" plus grand */
+    .view-category-btn {
+        padding: 14px 20px;
+        font-size: 16px;
+        border-radius: 12px;
+    }
+}
+
+/* 3. MODALS - Plein écran sur mobile */
+@media (max-width: 768px) {
+    /* Modal container */
+    .modal-container {
+        position: fixed;
+        inset: 0;
+        margin: 0;
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 0;
+        height: 100vh;
+        overflow-y: auto;
+    }
+
+    /* Header du modal sticky */
+    .modal-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 16px 20px;
+    }
+
+    .dark .modal-header {
+        background: #1f2937;
+        border-bottom-color: #374151;
+    }
+
+    /* Contenu du modal avec padding */
+    .modal-content {
+        padding: 20px;
+        padding-bottom: 100px; /* Espace pour les boutons sticky */
+    }
+
+    /* Boutons d'action sticky en bas */
+    .modal-actions {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 16px 20px;
+        background: white;
+        border-top: 1px solid #e5e7eb;
+        box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+    }
+
+    .dark .modal-actions {
+        background: #1f2937;
+        border-top-color: #374151;
+    }
+
+    .modal-actions button {
+        width: 100%;
+        padding: 16px;
+        font-size: 18px;
+        border-radius: 12px;
+    }
+
+    /* Animation d'entrée du modal */
+    .modal-enter {
+        animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}
+
+/* 4. GRAPHIQUES - Lisibilité mobile */
+@media (max-width: 768px) {
+    /* Container du graphique */
+    #budget-chart {
+        max-height: 300px;
+    }
+
+    /* Widgets avec graphiques */
+    [data-widget-id="chart"] .h-80 {
+        height: 300px;
+    }
+
+    /* Légende du graphique */
+    .chart-legend {
+        font-size: 12px;
+        padding: 8px;
+    }
+
+    /* Statistiques - Grid adapté */
+    .grid-cols-3 {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    /* Cartes de stats plus compactes */
+    .stat-card {
+        padding: 16px;
+        border-radius: 12px;
+    }
+
+    .stat-card .text-2xl {
+        font-size: 20px;
+    }
+
+    .stat-card .text-sm {
+        font-size: 13px;
+    }
+}
+
+/* NAVIGATION - Gestes tactiles */
+@media (max-width: 768px) {
+    /* Container principal avec support swipe */
+    #dashboard-screen {
+        touch-action: pan-y;
+        overscroll-behavior-x: contain;
+    }
+
+    /* Indicateur de swipe */
+    .swipe-indicator {
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(99, 102, 241, 0.9);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 100;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .swipe-indicator.left {
+        left: 20px;
+    }
+
+    .swipe-indicator.right {
+        right: 20px;
+    }
+
+    .swipe-indicator.show {
+        opacity: 1;
+    }
+
+    /* Bottom nav - Indicateur actif amélioré */
+    #mobile-bottom-nav button[data-tab] {
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    #mobile-bottom-nav button[data-tab].text-primary::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 3px;
+        background: currentColor;
+        border-radius: 0 0 3px 3px;
+    }
+}
+
+/* FORMULAIRES - Optimisation mobile */
+@media (max-width: 768px) {
+    /* Formulaire d'ajout rapide */
+    #expense-form,
+    #quick-expense-form {
+        padding: 20px;
+    }
+
+    /* Grid de formulaire - 1 colonne sur mobile */
+    form .grid-cols-2 {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    /* Labels plus visibles */
+    label {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    /* Boutons de formulaire */
+    form button[type="submit"] {
+        padding: 16px;
+        font-size: 18px;
+        font-weight: 600;
+        border-radius: 12px;
+        margin-top: 8px;
+    }
+
+    /* Select avec icône */
+    select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236366f1'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 20px;
+        padding-right: 40px;
+    }
+}
+
+/* TRANSACTIONS - Liste optimisée */
+@media (max-width: 768px) {
+    #recent-transactions > div {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 16px;
+    }
+
+    #recent-transactions .flex.items-center.gap-2 {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    /* Boutons d'action des transactions - Taille et espacement optimaux */
+    .edit-transaction-btn,
+    .delete-transaction-btn {
+        padding: 12px;
+        min-width: 48px;
+        min-height: 48px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        position: relative;
+        z-index: 1;
+        pointer-events: auto;
+    }
+
+    .edit-transaction-btn {
+        background: rgba(59, 130, 246, 0.1);
+    }
+
+    .delete-transaction-btn {
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    .edit-transaction-btn:active {
+        background: rgba(59, 130, 246, 0.2);
+        transform: scale(0.95);
+    }
+
+    .delete-transaction-btn:active {
+        background: rgba(239, 68, 68, 0.2);
+        transform: scale(0.95);
+    }
+
+    /* Icônes plus grandes pour meilleure zone de clic */
+    .edit-transaction-btn i,
+    .delete-transaction-btn i {
+        font-size: 18px;
+        pointer-events: none;
+    }
+
+    /* Espacement entre les boutons */
+    .edit-transaction-btn + .delete-transaction-btn {
+        margin-top: 12px;
+    }
+
+    /* Container des boutons */
+    #recent-transactions .flex.gap-1 {
+        gap: 12px;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    /* Modal de toutes les transactions */
+    #all-transactions-list .flex.flex-col.gap-1 {
+        gap: 8px;
+        flex-direction: column;
+    }
+
+    #all-transactions-list .edit-transaction-btn,
+    #all-transactions-list .delete-transaction-btn {
+        padding: 12px;
+        min-width: 48px;
+        min-height: 48px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 1;
+        pointer-events: auto;
+    }
+
+    #all-transactions-list .edit-transaction-btn i,
+    #all-transactions-list .delete-transaction-btn i {
+        font-size: 18px;
+        pointer-events: none;
+    }
+
+    #all-transactions-list .edit-transaction-btn {
+        background: rgba(59, 130, 246, 0.1);
+    }
+
+    #all-transactions-list .delete-transaction-btn {
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    #all-transactions-list .edit-transaction-btn + .delete-transaction-btn {
+        margin-top: 12px;
+    }
+}
+
+/* HEADER - Optimisation mobile */
+@media (max-width: 768px) {
+    header {
+        padding: 16px 20px;
+        margin-bottom: 20px;
+    }
+
+    header h1 {
+        font-size: 20px;
+    }
+
+    header h1 i {
+        font-size: 20px;
+    }
+
+    #current-month {
+        font-size: 14px;
+    }
+}
+
+/* WIDGETS - Espacement mobile */
+@media (max-width: 768px) {
+    [data-widget-id] {
+        margin-bottom: 16px;
+        padding: 20px;
+        border-radius: 16px;
+    }
+
+    [data-widget-id] h3 {
+        font-size: 18px;
+        margin-bottom: 16px;
+    }
+
+    /* Grid des widgets */
+    .grid.gap-6 {
+        gap: 16px;
+    }
+}
+
+/* SAFE AREA - Support iPhone notch */
+@supports (padding: max(0px)) {
+    @media (max-width: 768px) {
+        body {
+            padding-left: max(0px, env(safe-area-inset-left));
+            padding-right: max(0px, env(safe-area-inset-right));
+        }
+
+        #mobile-bottom-nav {
+            padding-bottom: max(0px, env(safe-area-inset-bottom));
+        }
+
+        header {
+            padding-top: max(16px, env(safe-area-inset-top));
+        }
+    }
+}
+
+/* ANIMATIONS - Feedback tactile */
+@media (max-width: 768px) {
+    button:active,
+    .category-card:active,
+    [data-widget-id]:active {
+        transform: scale(0.98);
+        transition: transform 0.1s;
+    }
+
+    /* Ripple effect */
+    .ripple {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .ripple::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+    }
+
+    .ripple:active::after {
+        width: 200px;
+        height: 200px;
+    }
+}
+
+/* ACCESSIBILITÉ - Amélioration contraste */
+@media (max-width: 768px) {
+    /* Texte plus lisible */
+    .text-gray-600 {
+        color: #4b5563;
+    }
+
+    .dark .text-gray-400 {
+        color: #9ca3af;
+    }
+
+    /* Focus visible */
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+        outline: 3px solid #6366f1;
+        outline-offset: 2px;
+    }
+}
+
+/* ANIMATIONS GLOBALES */
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes slideInFromBottom {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* TRANSITIONS ENTRE ONGLETS */
+@media (max-width: 768px) {
+    [data-widget-id] {
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}
+
+/* AMÉLIORATION DES INPUTS */
+@media (max-width: 768px) {
+    /* Inputs avec icônes */
+    .input-with-icon {
+        position: relative;
+    }
+
+    .input-with-icon input {
+        padding-left: 48px;
+    }
+
+    .input-with-icon i {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+        font-size: 18px;
+    }
+
+    /* Validation visuelle */
+    input:valid {
+        border-color: #10b981;
+    }
+
+    input:invalid:not(:placeholder-shown) {
+        border-color: #ef4444;
+    }
+
+    /* Placeholder amélioré */
+    input::placeholder,
+    textarea::placeholder {
+        color: #9ca3af;
+        opacity: 1;
+    }
+}
+
+/* LOADING STATES */
+@media (max-width: 768px) {
+    .loading {
+        position: relative;
+        pointer-events: none;
+        opacity: 0.6;
+    }
+
+    .loading::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        border: 2px solid #6366f1;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+}
+
+/* SKELETON LOADING */
+@media (max-width: 768px) {
+    .skeleton {
+        background: linear-gradient(
+            90deg,
+            #f3f4f6 25%,
+            #e5e7eb 50%,
+            #f3f4f6 75%
+        );
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 8px;
+    }
+
+    .dark .skeleton {
+        background: linear-gradient(
+            90deg,
+            #374151 25%,
+            #4b5563 50%,
+            #374151 75%
+        );
+        background-size: 200% 100%;
+    }
+
+    @keyframes loading {
+        0% {
+            background-position: 200% 0;
+        }
+        100% {
+            background-position: -200% 0;
+        }
+    }
+}
+
+/* PULL TO REFRESH AMÉLIORÉ */
+@media (max-width: 768px) {
+    .pull-to-refresh-indicator {
+        position: fixed;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%) translateY(-100%);
+        background: white;
+        padding: 12px 24px;
+        border-radius: 0 0 12px 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+        z-index: 1000;
+    }
+
+    .dark .pull-to-refresh-indicator {
+        background: #1f2937;
+    }
+
+    .pull-to-refresh-indicator.active {
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* TOAST NOTIFICATIONS MOBILE */
+@media (max-width: 768px) {
+    .toast {
+        position: fixed;
+        bottom: 80px; /* Au-dessus de la bottom nav */
+        left: 16px;
+        right: 16px;
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        animation: slideInFromBottom 0.3s ease-out;
+        z-index: 1000;
+    }
+}
+
+/* AMÉLIORATION DES LISTES */
+@media (max-width: 768px) {
+    /* Liste de transactions */
+    .transaction-list-item {
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s;
+    }
+
+    .dark .transaction-list-item {
+        background: #1f2937;
+    }
+
+    .transaction-list-item:active {
+        transform: scale(0.98);
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* EMPTY STATES */
+@media (max-width: 768px) {
+    .empty-state {
+        padding: 48px 24px;
+        text-align: center;
+    }
+
+    .empty-state i {
+        font-size: 48px;
+        color: #d1d5db;
+        margin-bottom: 16px;
+    }
+
+    .dark .empty-state i {
+        color: #4b5563;
+    }
+
+    .empty-state p {
+        color: #6b7280;
+        font-size: 16px;
+    }
+
+    .dark .empty-state p {
+        color: #9ca3af;
+    }
+}
