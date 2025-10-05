@@ -16,6 +16,7 @@ import { CalendarManager } from './js/modules/CalendarManager';
 import { TouchGestureManager } from './js/modules/TouchGestureManager';
 import { TransactionTemplateManager } from './js/modules/TransactionTemplateManager';
 import { AnalyticsManager } from './js/modules/AnalyticsManager';
+import { MobileUIManager } from './js/modules/MobileUIManager';
 import type { BudgetTemplate } from './types';
 
 // Exposer l'API client globalement pour compatibilité
@@ -39,6 +40,7 @@ class BudgetManager {
     private _touchGestureManager: TouchGestureManager;
     private templateManager: TransactionTemplateManager;
     private analyticsManager: AnalyticsManager;
+    private mobileUIManager: MobileUIManager;
     
     // Anti-spam notifications
     private lastAlertKey: string | null = null;
@@ -63,6 +65,7 @@ class BudgetManager {
         this._touchGestureManager = new TouchGestureManager();
         this.templateManager = new TransactionTemplateManager(this.dataManager);
         this.analyticsManager = new AnalyticsManager(this.dataManager);
+        this.mobileUIManager = new MobileUIManager();
         
         this.init();
     }

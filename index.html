@@ -22,6 +22,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/src/styles/mobile.css">
     <script>
         // Configuration Tailwind avec mode dark
         tailwind.config = {
@@ -45,37 +46,43 @@
         <i class="fas fa-sync-alt animate-spin mr-2"></i> Actualiser...
     </div>
     
-    <div class="max-w-6xl mx-auto p-5">
-        <header class="flex justify-between items-center bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl mb-8 transition-colors duration-300">
-            <h1 class="text-3xl font-bold text-primary dark:text-blue-400 flex items-center gap-3 transition-colors duration-300">
-                <i class="fas fa-wallet"></i> Mon Budget Personnel
+    <div class="max-w-6xl mx-auto p-5 pb-20 md:pb-5">
+        <header class="flex justify-between items-center bg-white dark:bg-gray-800 p-4 md:p-6 rounded-2xl shadow-xl mb-8 transition-colors duration-300">
+            <h1 class="text-xl md:text-3xl font-bold text-primary dark:text-blue-400 flex items-center gap-2 md:gap-3 transition-colors duration-300">
+                <i class="fas fa-wallet text-xl md:text-3xl"></i> 
+                <span class="hidden sm:inline">Mon Budget Personnel</span>
+                <span class="sm:hidden">Budget</span>
             </h1>
-            <div class="flex items-center gap-4">
-                <span id="current-month" class="font-semibold text-gray-600 dark:text-gray-300"></span>
-                <!-- Mode Édition -->
-                <button id="edit-mode-btn" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-all duration-300 hover:scale-105 flex items-center gap-2" title="Mode Édition">
+            <div class="flex items-center gap-2 md:gap-4">
+                <span id="current-month" class="hidden sm:block font-semibold text-gray-600 dark:text-gray-300"></span>
+                
+                <!-- Boutons Desktop uniquement -->
+                <button id="edit-mode-btn" class="hidden md:flex hide-on-mobile bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-all duration-300 hover:scale-105 items-center gap-2" title="Mode Édition">
                     <i class="fas fa-edit"></i>
-                    <span class="hidden md:inline">Éditer</span>
+                    <span class="hidden lg:inline">Éditer</span>
                 </button>
-                <!-- Export PDF -->
-                <button id="export-pdf-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all duration-300 hover:scale-105 flex items-center gap-2" title="Exporter en PDF">
+                
+                <button id="export-pdf-btn" class="hidden md:flex hide-on-mobile bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all duration-300 hover:scale-105 items-center gap-2" title="Exporter en PDF">
                     <i class="fas fa-file-pdf"></i>
-                    <span class="hidden md:inline">Export PDF</span>
+                    <span class="hidden lg:inline">Export PDF</span>
                 </button>
-                <!-- Sélecteur de Couleur -->
-                <button id="color-theme-btn" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 p-3 rounded-full transition-all duration-300 hover:scale-110" title="Changer la couleur">
+                
+                <button id="color-theme-btn" class="hidden md:block hide-on-mobile bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 p-3 rounded-full transition-all duration-300 hover:scale-110" title="Changer la couleur">
                     <i class="fas fa-palette text-gray-600 dark:text-gray-300"></i>
                 </button>
-                <!-- Toggle Mode Sombre -->
-                <button id="theme-toggle" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 p-3 rounded-full transition-all duration-300 hover:scale-110" title="Basculer le mode sombre">
+                
+                <!-- Toggle Mode Sombre (toujours visible) -->
+                <button id="theme-toggle" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 p-2 md:p-3 rounded-full transition-all duration-300 hover:scale-110" title="Basculer le mode sombre">
                     <i class="fas fa-moon text-gray-600 dark:text-gray-300 dark:hidden"></i>
                     <i class="fas fa-sun text-yellow-500 hidden dark:block"></i>
                 </button>
-                <button id="edit-budget-btn" class="bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-600 dark:text-blue-300 px-4 py-2 rounded-lg transition-all duration-300 hover:scale-105 flex items-center gap-2">
+                
+                <button id="edit-budget-btn" class="hidden md:flex hide-on-mobile bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-600 dark:text-blue-300 px-4 py-2 rounded-lg transition-all duration-300 hover:scale-105 items-center gap-2">
                     <i class="fas fa-edit"></i>
-                    <span class="hidden sm:inline">Modifier budgets</span>
+                    <span class="hidden lg:inline">Modifier budgets</span>
                 </button>
-                <button id="settings-btn" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 p-3 rounded-full transition-all duration-300 hover:scale-110">
+                
+                <button id="settings-btn" class="hidden md:block hide-on-mobile bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 p-3 rounded-full transition-all duration-300 hover:scale-110">
                     <i class="fas fa-cog text-gray-600 dark:text-gray-300"></i>
                 </button>
             </div>
@@ -1083,5 +1090,34 @@
         });
         */
     </script>
+
+    <!-- Bottom Navigation Mobile -->
+    <nav id="mobile-bottom-nav" class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40 hidden md:hidden safe-area-bottom">
+        <div class="grid grid-cols-4 h-16">
+            <!-- Dashboard -->
+            <button data-tab="dashboard" class="flex flex-col items-center justify-center gap-1 text-primary dark:text-blue-400 transition-colors">
+                <i class="fas fa-home text-xl"></i>
+                <span class="text-xs font-medium">Accueil</span>
+            </button>
+            
+            <!-- Transactions -->
+            <button data-tab="transactions" class="flex flex-col items-center justify-center gap-1 text-gray-500 dark:text-gray-400 transition-colors">
+                <i class="fas fa-receipt text-xl"></i>
+                <span class="text-xs font-medium">Transactions</span>
+            </button>
+            
+            <!-- Catégories -->
+            <button data-tab="categories" class="flex flex-col items-center justify-center gap-1 text-gray-500 dark:text-gray-400 transition-colors">
+                <i class="fas fa-th-large text-xl"></i>
+                <span class="text-xs font-medium">Catégories</span>
+            </button>
+            
+            <!-- Analytics -->
+            <button data-tab="analytics" class="flex flex-col items-center justify-center gap-1 text-gray-500 dark:text-gray-400 transition-colors">
+                <i class="fas fa-chart-bar text-xl"></i>
+                <span class="text-xs font-medium">Analyse</span>
+            </button>
+        </div>
+    </nav>
 </body>
 </html>
