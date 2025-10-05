@@ -153,7 +153,55 @@ class BudgetManager {
             }
         });
 
+        // Gestion du bouton retour Android
+        this.setupBackButtonHandler();
+
         console.log('✨ Application prête !');
+    }
+
+    // Gérer le bouton retour Android
+    setupBackButtonHandler(): void {
+        window.addEventListener('popstate', (e) => {
+            e.preventDefault();
+            
+            // Vérifier si un modal est ouvert
+            const modals = [
+                'quick-expense-modal',
+                'settings-modal',
+                'edit-budget-modal',
+                'edit-transaction-modal',
+                'all-transactions-modal',
+                'add-goal-modal',
+                'edit-goal-modal',
+                'recurring-modal',
+                'templates-modal',
+                'template-modal'
+            ];
+
+            let modalClosed = false;
+            for (const modalId of modals) {
+                const modal = document.getElementById(modalId);
+                if (modal && !modal.classList.contains('hidden')) {
+                    modal.classList.add('hidden');
+                    modalClosed = true;
+                    break;
+                }
+            }
+
+            // Si aucun modal n'était ouvert, revenir au dashboard
+            if (!modalClosed) {
+                const currentScreen = document.querySelector('.screen:not(.hidden)');
+                if (currentScreen && currentScreen.id !== 'dashboard-screen') {
+                    this.showDashboard();
+                }
+            }
+
+            // Empêcher la navigation par défaut
+            window.history.pushState(null, '', window.location.href);
+        });
+
+        // Initialiser l'état de l'historique
+        window.history.pushState(null, '', window.location.href);
     }
 
     // Afficher le dashboard
