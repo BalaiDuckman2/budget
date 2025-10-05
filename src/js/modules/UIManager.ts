@@ -158,7 +158,7 @@ export class UIManager {
             const remaining = category.budget - category.spent;
 
             const categoryCard = document.createElement('div');
-            categoryCard.className = 'category-card bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border-l-4 cursor-move';
+            categoryCard.className = 'category-card bg-white dark:bg-gray-800 p-3 md:p-4 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 border-l-4 cursor-move';
             categoryCard.style.borderColor = category.color || '#6366f1';
             categoryCard.dataset.categoryKey = key;
 
@@ -170,35 +170,32 @@ export class UIManager {
             }
 
             categoryCard.innerHTML = `
-                <div class="flex justify-between items-start mb-4">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-grip-vertical text-gray-400 cursor-move" title="Glisser pour réorganiser"></i>
-                        <div>
-                            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200">${category.name}</h3>
-                            <p class="text-sm text-gray-600 dark:text-gray-400">Budget: ${category.budget.toFixed(2)}€</p>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                        <i class="fas fa-grip-vertical text-gray-400 cursor-move text-sm hidden md:block" title="Glisser pour réorganiser"></i>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-base font-bold text-gray-800 dark:text-gray-200 truncate">${category.name}</h3>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                                <span>${category.spent.toFixed(0)}€ / ${category.budget.toFixed(0)}€</span>
+                                <span class="font-semibold ${percentage > 100 ? 'text-red-600' : percentage > 80 ? 'text-orange-600' : 'text-green-600'}">${percentage.toFixed(0)}%</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <p class="text-2xl font-bold ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}">${remaining.toFixed(2)}€</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">restant</p>
+                    <div class="text-right flex-shrink-0">
+                        <p class="text-lg font-bold ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}">${remaining.toFixed(0)}€</p>
+                        <button class="text-xs text-primary hover:text-primary-dark transition-colors view-category-btn mt-1" 
+                                data-category="${key}">
+                            <i class="fas fa-eye mr-1"></i>Voir
+                        </button>
                     </div>
                 </div>
                 
-                <div class="mb-3">
-                    <div class="flex justify-between text-sm mb-1">
-                        <span class="text-gray-600 dark:text-gray-400">Dépensé: ${category.spent.toFixed(2)}€</span>
-                        <span class="font-semibold ${percentage > 100 ? 'text-red-600' : 'text-gray-800 dark:text-gray-200'}">${percentage.toFixed(1)}%</span>
-                    </div>
-                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div class="mt-2">
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                         <div class="${progressBarColor} h-full rounded-full transition-all duration-500" 
                              style="width: ${Math.min(percentage, 100)}%"></div>
                     </div>
                 </div>
-                
-                <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded-lg transition-all duration-300 text-sm font-medium view-category-btn" 
-                        data-category="${key}">
-                    Voir les transactions
-                </button>
             `;
 
             container.appendChild(categoryCard);

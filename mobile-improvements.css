@@ -415,6 +415,58 @@
     }
 }
 
+/* CATÉGORIES - Style compact mobile */
+@media (max-width: 768px) {
+    #categories-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .category-card {
+        padding: 12px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .category-card:active {
+        transform: scale(0.98);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    /* Masquer l'icône de drag sur mobile */
+    .category-card .fa-grip-vertical {
+        display: none !important;
+    }
+
+    /* Optimiser les tailles de texte */
+    .category-card h3 {
+        font-size: 14px !important;
+        line-height: 1.2;
+    }
+
+    .category-card .text-lg {
+        font-size: 16px !important;
+    }
+
+    /* Barre de progression plus fine */
+    .category-card .h-2 {
+        height: 6px !important;
+    }
+
+    /* Bouton "Voir" plus compact */
+    .view-category-btn {
+        padding: 2px 8px;
+        font-size: 11px !important;
+        border-radius: 4px;
+        background: rgba(99, 102, 241, 0.1);
+    }
+
+    .view-category-btn:active {
+        background: rgba(99, 102, 241, 0.2);
+    }
+}
+
 /* HEADER - Optimisation mobile */
 @media (max-width: 768px) {
     header {

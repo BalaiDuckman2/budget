@@ -191,8 +191,6 @@ class BudgetManager {
         this.renderWidgetCalendar();
         this.renderQuickTemplates();
         this.renderMonthlyComparison();
-        this.renderBudgetPredictions();
-        this.renderAdvancedStats();
     }
 
     // Configuration initiale

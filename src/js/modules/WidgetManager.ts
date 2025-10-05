@@ -22,14 +22,12 @@ export class WidgetManager {
         { id: 'transactions', name: 'Dernières transactions', visible: true, order: 1, size: 'full' },
         { id: 'chart', name: 'Répartition Budget', visible: true, order: 2, size: 'medium' },
         { id: 'comparison', name: 'Comparaison Mensuelle', visible: true, order: 3, size: 'medium' },
-        { id: 'predictions', name: 'Prédictions', visible: true, order: 4, size: 'medium' },
-        { id: 'top-expenses', name: 'Top 5 Dépenses', visible: true, order: 5, size: 'medium' },
-        { id: 'stats', name: 'Statistiques Avancées', visible: true, order: 6, size: 'medium' },
-        { id: 'recurring', name: 'Transactions Récurrentes', visible: true, order: 7, size: 'medium' },
-        { id: 'quick-expense', name: 'Ajout Rapide', visible: true, order: 8, size: 'medium' },
-        { id: 'categories', name: 'Mes Catégories', visible: true, order: 9, size: 'full' },
-        { id: 'calendar-widget', name: 'Calendrier', visible: true, order: 10, size: 'full' },
-        { id: 'quick-templates-widget', name: 'Paiements Habituels', visible: true, order: 11, size: 'medium' },
+        { id: 'top-expenses', name: 'Top 5 Dépenses', visible: true, order: 4, size: 'medium' },
+        { id: 'recurring', name: 'Transactions Récurrentes', visible: true, order: 5, size: 'medium' },
+        { id: 'quick-expense', name: 'Ajout Rapide', visible: true, order: 6, size: 'medium' },
+        { id: 'categories', name: 'Mes Catégories', visible: true, order: 7, size: 'full' },
+        { id: 'calendar-widget', name: 'Calendrier', visible: true, order: 8, size: 'full' },
+        { id: 'quick-templates-widget', name: 'Paiements Habituels', visible: true, order: 9, size: 'medium' },
     ];
 
     constructor(_dataManager: DataManager) {
@@ -655,14 +653,12 @@ export class WidgetManager {
             { id: 'transactions', name: 'Dernières transactions', visible: true, order: 1, size: 'full' },
             { id: 'chart', name: 'Répartition Budget', visible: true, order: 2, size: 'medium' },
             { id: 'comparison', name: 'Comparaison Mensuelle', visible: true, order: 3, size: 'medium' },
-            { id: 'predictions', name: 'Prédictions', visible: true, order: 4, size: 'medium' },
-            { id: 'top-expenses', name: 'Top 5 Dépenses', visible: true, order: 5, size: 'medium' },
-            { id: 'stats', name: 'Statistiques Avancées', visible: true, order: 6, size: 'medium' },
-            { id: 'recurring', name: 'Transactions Récurrentes', visible: true, order: 7, size: 'medium' },
-            { id: 'quick-expense', name: 'Ajout Rapide', visible: true, order: 8, size: 'medium' },
-            { id: 'categories', name: 'Mes Catégories', visible: true, order: 9, size: 'full' },
-            { id: 'calendar-widget', name: 'Calendrier', visible: true, order: 10, size: 'full' },
-            { id: 'quick-templates-widget', name: 'Paiements Habituels', visible: true, order: 11, size: 'medium' },
+            { id: 'top-expenses', name: 'Top 5 Dépenses', visible: true, order: 4, size: 'medium' },
+            { id: 'recurring', name: 'Transactions Récurrentes', visible: true, order: 5, size: 'medium' },
+            { id: 'quick-expense', name: 'Ajout Rapide', visible: true, order: 6, size: 'medium' },
+            { id: 'categories', name: 'Mes Catégories', visible: true, order: 7, size: 'full' },
+            { id: 'calendar-widget', name: 'Calendrier', visible: true, order: 8, size: 'full' },
+            { id: 'quick-templates-widget', name: 'Paiements Habituels', visible: true, order: 9, size: 'medium' },
         ];
         
         // Réafficher tous les widgets
