@@ -65,7 +65,7 @@ class BudgetManager {
         this._touchGestureManager = new TouchGestureManager();
         this.templateManager = new TransactionTemplateManager(this.dataManager);
         this.analyticsManager = new AnalyticsManager(this.dataManager);
-        this.mobileUIManager = new MobileUIManager();
+        this.mobileUIManager = null as any; // Initialisé plus tard
         
         this.init();
     }
@@ -166,6 +166,11 @@ class BudgetManager {
             
             // Restaurer le layout des widgets
             this.widgetManager.restoreLayout();
+            
+            // Initialiser le MobileUIManager après l'affichage du dashboard
+            if (!this.mobileUIManager) {
+                this.mobileUIManager = new MobileUIManager();
+            }
         }, 50);
     }
 

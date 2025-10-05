@@ -10,6 +10,12 @@ export class MobileUIManager {
         this.setupBottomNav();
         this.setupMobileHeader();
         this.detectMobile();
+        
+        // Initialiser l'affichage correct au chargement
+        if (this.isMobile()) {
+            // Afficher uniquement le dashboard au démarrage
+            this.switchTab('dashboard');
+        }
     }
 
     // Détecter si on est sur mobile
@@ -74,8 +80,8 @@ export class MobileUIManager {
         
         switch(tabName) {
             case 'dashboard':
-                // Afficher résumé, graphique, stats
-                this.showWidgets(['summary', 'chart', 'stats', 'predictions']);
+                // Afficher résumé, graphique
+                this.showWidgets(['summary', 'chart']);
                 break;
             case 'transactions':
                 // Afficher transactions et templates
@@ -86,8 +92,8 @@ export class MobileUIManager {
                 this.showWidgets(['categories', 'quick-expense']);
                 break;
             case 'analytics':
-                // Afficher analytics
-                this.showWidgets(['comparison', 'top-expenses', 'recurring']);
+                // Afficher analytics, prédictions et statistiques avancées
+                this.showWidgets(['comparison', 'predictions', 'stats', 'top-expenses', 'recurring']);
                 break;
         }
 

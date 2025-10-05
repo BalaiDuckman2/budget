@@ -1021,74 +1021,68 @@
     <!-- Application principale (TypeScript + Vite) -->
     <script type="module" src="/src/main.ts"></script>
     
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration & PWA Install -->
     <script>
-        // Désactiver complètement le Service Worker (pour éviter les problèmes de cache)
+        // Service Worker pour PWA
         if ('serviceWorker' in navigator) {
-            // Désenregistrer tous les service workers existants
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister();
-                    console.log('🧹 Service Worker désenregistré');
-                }
-            });
-        }
-        
-        // Service Worker désactivé - Décommentez pour activer en production
-        /*
-        if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js')
                     .then((registration) => {
                         console.log('✅ Service Worker enregistré:', registration.scope);
-                        
-                        // Vérifier les mises à jour
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // Nouvelle version disponible
-                                    if (confirm('Une nouvelle version est disponible ! Recharger ?')) {
-                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
-                                        window.location.reload();
-                                    }
-                                }
-                            });
-                        });
                     })
                     .catch((error) => {
                         console.log('❌ Erreur Service Worker:', error);
                     });
             });
-            
-            // Recharger quand un nouveau Service Worker prend le contrôle
-            let refreshing = false;
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (!refreshing) {
-                    refreshing = true;
-                    window.location.reload();
-                }
-            });
         }
-        */
         
-        // Détecter l'installation de la PWA (désactivé avec le Service Worker)
-        /*
+        // Gestion de l'installation PWA
         let deferredPrompt;
+        const installButton = document.createElement('button');
+        installButton.id = 'pwa-install-btn';
+        installButton.className = 'fixed bottom-20 right-4 md:bottom-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 z-50 hidden items-center gap-2 font-semibold';
+        installButton.innerHTML = '<i class="fas fa-download"></i> <span>Installer l\'app</span>';
+        document.body.appendChild(installButton);
+
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
             
-            // Afficher un bouton d'installation personnalisé (optionnel)
-            console.log('💡 PWA installable !');
+            // Afficher le bouton d'installation UNIQUEMENT sur mobile
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isSmallScreen = window.innerWidth < 768;
+            
+            if (isMobile || isSmallScreen) {
+                installButton.classList.remove('hidden');
+                installButton.classList.add('flex');
+                console.log('💡 PWA installable sur mobile !');
+            } else {
+                console.log('💡 PWA installable (bouton masqué sur desktop)');
+            }
+        });
+
+        installButton.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+
+            // Afficher le prompt d'installation
+            deferredPrompt.prompt();
+            
+            // Attendre la réponse
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`Installation: ${outcome}`);
+            
+            // Masquer le bouton
+            installButton.classList.add('hidden');
+            installButton.classList.remove('flex');
+            deferredPrompt = null;
         });
         
         // Détecter quand l'app est installée
         window.addEventListener('appinstalled', () => {
             console.log('🎉 PWA installée avec succès !');
+            installButton.classList.add('hidden');
             deferredPrompt = null;
         });
-        */
     </script>
 
     <!-- Bottom Navigation Mobile -->
