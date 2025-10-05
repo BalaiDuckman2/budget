@@ -11,7 +11,9 @@ export class DataManager {
             categories: {},
             transactions: [],
             recurringTransactions: [],
-            savingsGoals: []
+            savingsGoals: [],
+            savingsAccounts: [],
+            savingsTransactions: []
         };
     }
 
@@ -34,6 +36,12 @@ export class DataManager {
             }
             if (!this.data.transactionTemplates) {
                 this.data.transactionTemplates = [];
+            }
+            if (!this.data.savingsAccounts) {
+                this.data.savingsAccounts = [];
+            }
+            if (!this.data.savingsTransactions) {
+                this.data.savingsTransactions = [];
             }
             
             // Ajouter des IDs aux transactions existantes qui n'en ont pas

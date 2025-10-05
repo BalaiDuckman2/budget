@@ -56,6 +56,22 @@ export class WidgetManager {
                     });
                     console.log('✅ Widget calendrier ajouté à la configuration');
                 }
+
+                // Vérifier si quick-templates-widget existe, sinon l'ajouter
+                const hasTemplates = this.defaultWidgets.find(w => w.id === 'quick-templates-widget');
+                if (!hasTemplates) {
+                    this.defaultWidgets.push({ 
+                        id: 'quick-templates-widget', 
+                        name: 'Paiements Habituels', 
+                        visible: true, 
+                        order: 11, 
+                        size: 'medium' 
+                    });
+                    console.log('✅ Widget Paiements Habituels ajouté à la configuration');
+                    // Sauvegarder immédiatement
+                    this.saveLayout();
+                }
+
             } catch (e) {
                 console.error('Erreur chargement layout:', e);
             }

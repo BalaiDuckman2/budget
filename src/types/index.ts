@@ -39,6 +39,33 @@ export interface SavingsGoal {
     completed: boolean;
 }
 
+export type SavingsType = 'normal' | 'crypto' | 'finance' | 'emergency';
+
+export interface SavingsAccount {
+    id: string;
+    name: string;
+    type: SavingsType;
+    balance: number;
+    target?: number;
+    currency?: string; // EUR, BTC, ETH, etc.
+    interestRate?: number;
+    createdAt: string;
+    lastUpdated: string;
+    color?: string;
+    icon?: string;
+    notes?: string;
+}
+
+export interface SavingsTransaction {
+    id: string;
+    accountId: string;
+    amount: number;
+    type: 'deposit' | 'withdrawal';
+    description: string;
+    date: string;
+    balanceAfter: number;
+}
+
 export interface TransactionTemplate {
     id: string;
     name: string;
@@ -69,6 +96,8 @@ export interface BudgetData {
     savingsGoals: SavingsGoal[];
     transactionTemplates?: TransactionTemplate[];
     monthlyHistory?: MonthlyHistory[];
+    savingsAccounts?: SavingsAccount[];
+    savingsTransactions?: SavingsTransaction[];
 }
 
 export interface CategoryStats {

@@ -152,7 +152,7 @@ class BudgetManager {
                 this.deleteTransaction(transactionId);
             }
         });
-        
+
         console.log('✨ Application prête !');
     }
 
